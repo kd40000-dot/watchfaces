@@ -17,8 +17,8 @@ Reconstruction of the OnePlus **Arcs** dial using a Dracula color palette and ad
 - Rotates the external 360-degree bezel markings and cardinal directions with heading.
 - Uses compass-heading smoothing and only invalidates when direction changes, avoiding 60 fps refresh.
 - Registers compass sensors only while visible and active; stops on ambient, hidden, and service destruction.
-- Real time, date, two circular central complications, and four additional editable corner complications.
-- Four Dracula-colored progress arcs that respond to RANGED_VALUE/GOAL_PROGRESS providers; battery gauge also falls back to the watch battery level.
+- Real time, date, two circular central complications, and four additional editable corner complications. Center icons use larger Dracula green/pink accents, and center disks are near-black.
+- Four Dracula-colored progress arcs that respond to their own slot's RANGED_VALUE/GOAL_PROGRESS provider. Short text containing an explicit percentage is also supported. Other short-text categories are displayed with unfilled tracks rather than fake progress. Watch battery without an explicit '%' can be resolved against the actual watch battery; a duplicate step count matching the center steps can use an 8000-step reference goal.
 - OLED black AOD showing only subdued time.
 - Standalone package `dev.kd40000.arcscompasslive` does not replace stock Arcs.
 
@@ -27,6 +27,15 @@ Reconstruction of the OnePlus **Arcs** dial using a Dracula color palette and ad
 The AndroidX Watch Face Service approach is **not Watch Face Format**. Android now generally requires WFF for installing new watch faces. Official documentation on OTA upgraded watches suggests that pre-existing legacy faces may continue to work, but does not guarantee that a *newly sideloaded* legacy APK will be selectable. This implementation compiles and packages successfully on GitHub Actions, but has not been tested on the physical OnePlus Watch 2. It may fail to appear in the picker or be blocked on Wear OS 5.
 
 The compass is a sensor heading, not GPS bearing or true-north corrected heading. Magnetic interference and wrist orientation affect accuracy; don't use this prototype for navigation. The original OPlus complication artwork/icons and vendor data sources are not reproduced 1:1.
+
+### v0.4.0 live version
+- Outer label **position and tangent geometry unchanged** from v0.3.0.
+- Compass ring retains its full prominence and rotating heading.
+- OLED-black background and darker center circles.
+- Colored, larger provider icons in the center. Outer icons use matching Dracula colors and context-appropriate vector fallbacks.
+- Readable consistent text sizes, constrained by measured length.
+- Default providers on **new installations** are: center steps and battery; outside upper left notifications, upper right sunrise/sunset, lower left world clock, lower right date. These provide six distinct information sources; some new defaults are not progress metrics, so their arcs remain unfilled until assigned a ranged/goal data provider. Existing complication selections are persisted by the OS and are not overwritten by updating the app.
+- The original proprietary OnePlus assets and exact stock face rendering remain separate.
 
 ## WFF v2 fallback (`watchface`)
 
@@ -51,4 +60,4 @@ adb install -r watchface-debug.apk
 Select **Arcs Dracula Live Compass** or **Arcs Dracula Compass** in the watch's face picker. If legacy selection is rejected, that is a platform limitation, not proof that the magnetic sensor is missing.
 
 ## Theme
-Dracula background `#282A36`, foreground `#F8F8F2`, track `#44475A`, muted `#6272A4`, orange `#FFB86C`, green `#50FA7B`, cyan `#8BE9FD`, purple `#BD93F9`, pink `#FF79C6`, red `#FF5555`.
+Active OLED background `#000000` (center disks `#1F202A`), foreground `#F8F8F2`, track `#44475A`, muted `#6272A4`, orange `#FFB86C`, green `#50FA7B`, cyan `#8BE9FD`, purple `#BD93F9`, pink `#FF79C6`, red `#FF5555`.
