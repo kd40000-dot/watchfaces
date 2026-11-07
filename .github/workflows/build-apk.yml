@@ -1,4 +1,4 @@
-name: Build Wear OS 5 APK
+name: Validate and build Arcs Dracula for Wear OS 5
 on:
   push:
     branches: [main]
@@ -15,12 +15,20 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
+      - name: Validate Watch Face Format 2 XML
+        run: |
+          curl -fsSL --retry 3 -o /tmp/wff-validator.jar https://github.com/google/watchface/releases/download/release/wff-validator.jar
+          java -jar /tmp/wff-validator.jar 2 watchface/src/main/res/raw/watchface.xml
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.9'
       - name: Build APK
         run: gradle --no-daemon :watchface:assembleDebug
-      - name: Upload installable APK
+      - name: Verify debug package exists
+        run: |
+          ls -lh watchface/build/outputs/apk/debug/*.apk
+          unzip -t watchface/build/outputs/apk/debug/*.apk | tail -2
+      - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: Arcs-Dracula-Compass-WearOS5-debug
