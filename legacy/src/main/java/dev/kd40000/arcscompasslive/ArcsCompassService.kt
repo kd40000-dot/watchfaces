@@ -108,12 +108,14 @@ class ArcsCompassService : WatchFaceService() {
             RectF(304f/466, 347f/466, 421f/466, 385f/466)
         )
         val systemIds = listOf(
+            // Six distinct safe system defaults; users can choose their
+            // preferred fitness/health sources in the editor.
             SystemDataSources.DATA_SOURCE_STEP_COUNT,
             SystemDataSources.DATA_SOURCE_WATCH_BATTERY,
-            SystemDataSources.DATA_SOURCE_STEP_COUNT,
-            SystemDataSources.DATA_SOURCE_WATCH_BATTERY,
-            SystemDataSources.DATA_SOURCE_DATE,
-            SystemDataSources.DATA_SOURCE_WATCH_BATTERY
+            SystemDataSources.DATA_SOURCE_UNREAD_NOTIFICATION_COUNT,
+            SystemDataSources.DATA_SOURCE_SUNRISE_SUNSET,
+            SystemDataSources.DATA_SOURCE_WORLD_CLOCK,
+            SystemDataSources.DATA_SOURCE_DATE
         )
         val resources = intArrayOf(
             R.string.slot_1, R.string.slot_2, R.string.slot_3,
@@ -278,19 +280,13 @@ class ArcsCompassService : WatchFaceService() {
             val time = String.format(Locale.getDefault(), "%02d:%02d", h, zonedDateTime.minute)
             text(canvas, time, 233f, 228f, 99f, if (ambient) muted else fg,
                 if (ambient) Typeface.NORMAL else Typeface.BOLD)
-            if (!ambient) drawOuterComplicationLabels(canvas)
-            canvas.restoreToCount(saved)
             if (!ambient) {
-                // Only the two center circles use the standard complication
-                // renderer. The four edge slots remain configurable/tappable,
-                // but their icon and value are rendered tangentially above.
-                for (id in 1..2) {
-                    val slot = slots[id]
-                    if (slot != null && slot.enabled) {
-                        slot.render(canvas, zonedDateTime, renderParameters)
-                    }
-                }
+                drawOuterComplicationLabels(canvas)
+                drawCenterComplications(canvas)
             }
+            canvas.restoreToCount(saved)
+            // All six slot bounds remain active for taps and editor selection.
+            // Values/icons are custom drawn to avoid stock renderer styling.
         }
 
         /**
@@ -336,12 +332,19 @@ class ArcsCompassService : WatchFaceService() {
                 p.style = Paint.Style.FILL
                 p.color = fg
                 p.typeface = Typeface.create("sans-serif", Typeface.BOLD)
-                p.textSize = if (value.length > 6) 17f else 21f
+                // Uniform nominal size, scaled by measured width only when
+                // required. Same bearing, radius and arc side as v0.3.0.
+                p.textSize = 20f
                 p.textAlign = Paint.Align.LEFT
-
-                val valueWidth = p.measureText(value)
                 val iconSize = 21f
-                val gap = 7f
+                val gap = 6f
+                val labelMax = 100f
+                val textWidth = p.measureText(value)
+                if (textWidth > labelMax - iconSize - gap) {
+                    p.textScaleX = ((labelMax - iconSize - gap) / textWidth)
+                        .coerceIn(0.62f, 1f)
+                }
+                val valueWidth = p.measureText(value)
                 val total = iconSize + gap + valueWidth
                 val iconX = -total / 2f
                 val valueX = iconX + iconSize + gap
@@ -369,16 +372,9 @@ class ArcsCompassService : WatchFaceService() {
                 else -> null
             }
             if (value != null) return value
-            // Without a provider value, show only reliably-known system data.
-            return when (id) {
-                4, 6 -> batteryProgress()?.let { "${(it * 100).toInt()}%" }
-                3 -> slots[1]?.complicationData?.value?.let {
-                    if (it is ShortTextComplicationData)
-                        clean(it.text.getTextAt(context.resources, Instant.now()).toString())
-                    else null
-                }
-                else -> null
-            }
+            // Never copy data from another slot. It caused false duplicates
+            // and arcs that did not correspond to their numbers.
+            return null
         }
 
         private fun outerIcon(data: ComplicationData?): Icon? = when (data) {
@@ -416,7 +412,7 @@ class ArcsCompassService : WatchFaceService() {
             p.strokeWidth = 2.5f
             p.strokeCap = Paint.Cap.ROUND
             p.color = color
-            if (id == 4 || id == 6) {
+            if (id == 2 || id == 4 || id == 6) {
                 canvas.drawRoundRect(left + 1f, top + 3f, left + 17f,
                     top + 18f, 3f, 3f, p)
                 p.style = Paint.Style.FILL
@@ -437,9 +433,9 @@ class ArcsCompassService : WatchFaceService() {
 
         private fun circles(canvas: Canvas) {
             p.style = Paint.Style.FILL
-            p.color = track
-            canvas.drawCircle(165f, 309f, 55f, p)
-            canvas.drawCircle(301f, 309f, 55f, p)
+            p.color = Color.rgb(31, 32, 42) // dark, less prominent than the arc colors
+            canvas.drawCircle(165f, 309f, 52f, p)
+            canvas.drawCircle(301f, 309f, 52f, p)
         }
 
         private fun drawArcs(canvas: Canvas) {
@@ -458,14 +454,11 @@ class ArcsCompassService : WatchFaceService() {
                 val sweep = a[1] - a[0]
                 p.color = track
                 canvas.drawArc(rect, start, sweep, false, p)
-                // SHORT_TEXT steps/battery are the default system providers on
-                // OnePlus Watch 2; they do not expose RANGED_VALUE data.
-                // Use known central step count / system battery as fallbacks.
-                val percentage = complicationProgress(ids[i]) ?: when (ids[i]) {
-                    3, 5 -> stepProgress()
-                    4, 6 -> batteryProgress()
-                    else -> null
-                }
+                // A filled arc must represent THIS slot's value.
+                // Ranged/goal complications provide a real range. Plain
+                // percentage strings are safe to normalize; other text
+                // (date, world clock, notifications) remains an unfilled track.
+                val percentage = displayProgress(ids[i])
                 if (percentage != null) {
                     p.color = colors[i]
                     canvas.drawArc(rect, start, sweep * percentage.coerceIn(0f,1f), false, p)
@@ -486,29 +479,85 @@ class ArcsCompassService : WatchFaceService() {
             }?.takeIf { it.isFinite() }?.coerceIn(0f, 1f)
         }
 
-        private fun batteryProgress(): Float? {
-            val value = (context.getSystemService(Context.BATTERY_SERVICE) as BatteryManager)
+        private fun displayProgress(id: Int): Float? {
+            complicationProgress(id)?.let { return it }
+            val data = slots[id]?.complicationData?.value as? ShortTextComplicationData
+                ?: return null
+            val text = data.text.getTextAt(context.resources, Instant.now()).toString().trim()
+            // An explicit percent is already a normalized data source. Don't
+            // invent progress for a date, count, calendar event, or clock.
+            val match = Regex("""^([0-9]{1,3}(?:[.,][0-9]+)?)\\s*%$""")
+                .matchEntire(text)
+            if (match != null) {
+                return (match.groupValues[1].replace(',', '.').toFloatOrNull()
+                    ?: return null).div(100f).coerceIn(0f,1f)
+            }
+            // Watch battery sources sometimes supply '76' without '%'.
+            // Only accept this when it matches the actual watch battery.
+            val battery = (context.getSystemService(Context.BATTERY_SERVICE) as BatteryManager)
                 .getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY)
-            return if (value in 0..100) value / 100f else null
-        }
-
-        private fun stepProgress(): Float? {
-            // Center step complication is the most reliable readout of the
-            // user's chosen step provider. Default reference goal: 8000 steps.
-            for (id in intArrayOf(1, 3)) {
-                val data = slots[id]?.complicationData?.value
-                if (data is RangedValueComplicationData || data is GoalProgressComplicationData) {
-                    val progress = complicationProgress(id)
-                    if (progress != null) return progress
-                }
-                if (data is ShortTextComplicationData) {
-                    val raw = data.text.getTextAt(context.resources, Instant.now()).toString()
-                    val count = raw.filter { it.isDigit() }.toIntOrNull() ?: continue
-                    // Ignore unrelated SHORT_TEXT values such as "07" (day).
-                    if (count in 0..100000) return (count / 8000f).coerceIn(0f, 1f)
-                }
+            if (battery in 0..100 && text.toIntOrNull() == battery)
+                return battery / 100f
+            // A step count is progress only if the exact same value appears
+            // in the central step-count slot. This preserves the previous
+            // 8000-step reference goal for manually duplicated step sources,
+            // without treating a date or unrelated integer as steps.
+            val center = slots[1]?.complicationData?.value as? ShortTextComplicationData
+            if (center != null && text == center.text.getTextAt(context.resources,Instant.now()).toString().trim()) {
+                val count = text.filter { it.isDigit() }.toIntOrNull()
+                if (count != null && count >= 100)
+                    return (count / 8000f).coerceIn(0f,1f)
             }
             return null
+        }
+
+        private fun drawCenterComplications(canvas: Canvas) {
+            val centers = arrayOf(Triple(1,165f,green), Triple(2,301f,pink))
+            for ((id, x, tint) in centers) {
+                val slot = slots[id] ?: continue
+                if (!slot.enabled) continue
+                val data = slot.complicationData.value
+                val value = centerValue(data)
+                val icon = outerIcon(data)
+                // Big, brightly-colored provider icon as on stock Arcs.
+                // Short value remains readable, but subordinate to the icon.
+                val iconSize = if (value == null) 46f else 39f
+                val iconY = if (value == null) 309f-iconSize/2f else 280f
+                val save = canvas.save()
+                canvas.translate(x - iconSize / 2f,iconY)
+                canvas.scale(iconSize/21f,iconSize/21f)
+                drawOuterIcon(canvas,id,data,0f,0f,tint)
+                canvas.restoreToCount(save)
+
+                if (value != null) {
+                    p.reset()
+                    p.isAntiAlias = true
+                    p.style = Paint.Style.FILL
+                    p.textAlign = Paint.Align.CENTER
+                    p.typeface = Typeface.create("sans-serif",Typeface.BOLD)
+                    p.color = fg
+                    p.textSize = 19f
+                    val maxWidth = 90f
+                    val rawWidth = p.measureText(value)
+                    if (rawWidth > maxWidth) p.textScaleX = (maxWidth/rawWidth).coerceIn(0.62f,1f)
+                    canvas.drawText(value,x,337f,p)
+                }
+            }
+        }
+
+        private fun centerValue(data: ComplicationData?): String? {
+            val value = when(data) {
+                is ShortTextComplicationData ->
+                    data.text.getTextAt(context.resources,Instant.now()).toString()
+                is RangedValueComplicationData ->
+                    data.text?.getTextAt(context.resources,Instant.now())?.toString()
+                        ?: String.format(Locale.US,"%.0f",data.value)
+                is GoalProgressComplicationData ->
+                    data.text?.getTextAt(context.resources,Instant.now())?.toString()
+                        ?: String.format(Locale.US,"%.0f",data.value)
+                else -> null
+            }
+            return value?.trim()?.takeIf { it.isNotBlank() && it != "--" && it != "null" }
         }
 
         private fun drawCompass(canvas: Canvas) {
