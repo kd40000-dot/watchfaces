@@ -1,6 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Arcs Dracula Compass</string>
-    <string name="left_slot">Left complication</string>
-    <string name="right_slot">Right complication</string>
+  <string name="app_name">Arcs Dracula Compass</string>
+  <string name="slot_1">Left center</string>
+  <string name="slot_2">Right center</string>
+  <string name="slot_3">Upper-left arc</string>
+  <string name="slot_4">Upper-right arc</string>
+  <string name="slot_5">Lower-left arc</string>
+  <string name="slot_6">Lower-right arc</string>
 </resources>
