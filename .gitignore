@@ -1,0 +1,5 @@
+ci/*.jks
+.gradle/
+**/build/
+.idea/
+*.iml
