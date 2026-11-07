@@ -242,16 +242,15 @@ class ArcsCompassService : WatchFaceService() {
                 drawCompass(canvas)
                 drawArcs(canvas)
                 circles(canvas)
-                text(canvas, "DATE", 233f, 115f, 1f, fg) // overwritten by actual date
                 val dateString = zonedDateTime.format(
                     DateTimeFormatter.ofPattern("EEE, MMM d", Locale.getDefault())
                 )
-                text(canvas, dateString, 233f, 154f, 27f, fg)
+                text(canvas, dateString, 233f, 137f, 27f, fg)
             }
             val h = if (DateFormat.is24HourFormat(context)) zonedDateTime.hour
                 else ((zonedDateTime.hour + 11) % 12 + 1)
             val time = String.format(Locale.getDefault(), "%02d:%02d", h, zonedDateTime.minute)
-            text(canvas, time, 233f, 253f, 85f, if (ambient) muted else fg,
+            text(canvas, time, 233f, 228f, 99f, if (ambient) muted else fg,
                 if (ambient) Typeface.NORMAL else Typeface.BOLD)
             canvas.restoreToCount(saved)
             if (!ambient) {
