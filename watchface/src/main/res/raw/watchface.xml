@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Wear OS 5 Watch Face Format 2. The compass bezel is currently FIXED and does not track heading. -->
+<WatchFace width="466" height="466">
+<Scene backgroundColor="#282A36">
+  <Group name="decoration" x="0" y="0" width="466" height="466">
+    <Variant mode="AMBIENT" target="alpha" value="0"/>
+    <PartDraw x="0" y="0" width="466" height="466">
+      <Ellipse x="28" y="28" width="410" height="410"><Stroke color="#6272A4" thickness="3"/></Ellipse>
+      <Ellipse x="38" y="38" width="390" height="390"><Stroke color="#44475A" thickness="1"/></Ellipse>
+      <Arc centerX="233" centerY="233" width="348" height="348" startAngle="210" endAngle="294"><Stroke color="#FFB86C" thickness="11" cap="ROUND"/></Arc>
+<Arc centerX="233" centerY="233" width="348" height="348" startAngle="25" endAngle="70"><Stroke color="#50FA7B" thickness="11" cap="ROUND"/></Arc>
+<Arc centerX="233" centerY="233" width="348" height="348" startAngle="115" endAngle="163"><Stroke color="#BD93F9" thickness="11" cap="ROUND"/></Arc>
+<Arc centerX="233" centerY="233" width="348" height="348" startAngle="199" endAngle="250"><Stroke color="#50FA7B" thickness="11" cap="ROUND"/></Arc>
+    </PartDraw>
+  </Group>
+  <PartText x="209" y="2" width="48" height="36"><Text align="CENTER"><Font family="SYNC_TO_DEVICE" size="25" color="#FF5555">N</Font></Text></PartText>
+  <PartText x="420" y="213" width="37" height="36"><Text align="CENTER"><Font family="SYNC_TO_DEVICE" size="25" color="#F8F8F2">E</Font></Text></PartText>
+  <PartText x="208" y="415" width="50" height="38"><Text align="CENTER"><Font family="SYNC_TO_DEVICE" size="25" color="#F8F8F2">S</Font></Text></PartText>
+  <PartText x="9" y="213" width="38" height="36"><Text align="CENTER"><Font family="SYNC_TO_DEVICE" size="25" color="#F8F8F2">W</Font></Text></PartText>
+  <Group name="date" x="0" y="0" width="466" height="466">
+    <Variant mode="AMBIENT" target="alpha" value="0"/>
+    <PartText x="95" y="128" width="276" height="43">
+      <Text align="CENTER"><Font family="SYNC_TO_DEVICE" size="27" color="#F8F8F2">
+        <Template><![CDATA[%s, %s %d]]><Parameter expression="[DAY_OF_WEEK_S]"/><Parameter expression="[MONTH_S]"/><Parameter expression="[DAY]"/></Template>
+      </Font></Text>
+    </PartText>
+  </Group>
+  <DigitalClock x="63" y="164" width="340" height="89">
+    <TimeText x="0" y="0" width="340" height="89" format="hh:mm">
+      <Font family="SYNC_TO_DEVICE" size="86" color="#F8F8F2"/>
+    </TimeText>
+  </DigitalClock>
+  <ComplicationSlot slotId="1" name="slot1" displayName="@string/left_slot" supportedTypes="SHORT_TEXT EMPTY" x="112" y="270" width="112" height="86">
+<BoundingOval x="0" y="0" width="112" height="86"/>
+<DefaultProviderPolicy defaultSystemProvider="STEP_COUNT" defaultSystemProviderType="SHORT_TEXT"/>
+<Complication type="SHORT_TEXT"><PartText x="0" y="0" width="112" height="86"><Text align="CENTER"><Font family="SYNC_TO_DEVICE" size="23" color="#50FA7B"><Template><![CDATA[%s]]><Parameter expression="[COMPLICATION.TEXT]"/></Template></Font></Text></PartText></Complication>
+<Complication type="EMPTY"/>
+</ComplicationSlot>
+  <ComplicationSlot slotId="2" name="slot2" displayName="@string/right_slot" supportedTypes="SHORT_TEXT EMPTY" x="240" y="270" width="112" height="86">
+<BoundingOval x="0" y="0" width="112" height="86"/>
+<DefaultProviderPolicy defaultSystemProvider="BATTERY" defaultSystemProviderType="SHORT_TEXT"/>
+<Complication type="SHORT_TEXT"><PartText x="0" y="0" width="112" height="86"><Text align="CENTER"><Font family="SYNC_TO_DEVICE" size="23" color="#FFB86C"><Template><![CDATA[%s]]><Parameter expression="[COMPLICATION.TEXT]"/></Template></Font></Text></PartText></Complication>
+<Complication type="EMPTY"/>
+</ComplicationSlot>
+</Scene>
+</WatchFace>
