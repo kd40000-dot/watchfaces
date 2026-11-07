@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Arcs Dracula Compass</string>
+    <string name="left_slot">Left complication</string>
+    <string name="right_slot">Right complication</string>
+</resources>
