@@ -15,6 +15,10 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
+      - name: Restore permanent development signing key
+        run: |
+          base64 --decode ci/arcs-dev-signing.jks.b64 > ci/arcs-dev-signing.jks
+          keytool -list -keystore ci/arcs-dev-signing.jks -storepass ArcsDraculaDev26 -alias arcsdev
       - name: Validate Watch Face Format 2 XML
         run: |
           curl -fsSL --retry 3 -o /tmp/wff-validator.jar https://github.com/google/watchface/releases/download/release/wff-validator.jar
