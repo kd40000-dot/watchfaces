@@ -4,6 +4,8 @@ package dev.kd40000.arcscompasslive
 import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Color
+import android.graphics.drawable.Drawable
+import android.graphics.drawable.Icon
 import android.graphics.Paint
 import android.graphics.Path
 import android.graphics.Rect
@@ -31,6 +33,9 @@ import androidx.wear.watchface.complications.DefaultComplicationDataSourcePolicy
 import androidx.wear.watchface.complications.SystemDataSources
 import androidx.wear.watchface.complications.data.ComplicationExperimental
 import androidx.wear.watchface.complications.data.ComplicationType
+import androidx.wear.watchface.complications.data.ComplicationData
+import androidx.wear.watchface.complications.data.MonochromaticImageComplicationData
+import androidx.wear.watchface.complications.data.SmallImageComplicationData
 import androidx.wear.watchface.complications.data.ShortTextComplicationData
 import androidx.wear.watchface.complications.data.RangedValueComplicationData
 import androidx.wear.watchface.complications.data.GoalProgressComplicationData
@@ -158,7 +163,7 @@ class ArcsCompassService : WatchFaceService() {
         clearWithBackgroundTintBeforeRenderingHighlightLayer = true
     ), SensorEventListener {
         private val p = Paint(Paint.ANTI_ALIAS_FLAG)
-        private val bg = Color.rgb(40, 42, 54) // #282A36
+        private val bg = Color.BLACK // OLED black, as in the stock Arcs face
         private val fg = Color.rgb(248, 248, 242)
         private val muted = Color.rgb(98, 114, 164)
         private val track = Color.rgb(68, 71, 90)
@@ -168,6 +173,8 @@ class ArcsCompassService : WatchFaceService() {
         private val orange = Color.rgb(255, 184, 108)
         private val cyan = Color.rgb(139, 233, 253)
         private val red = Color.rgb(255, 85, 85)
+        // Avoid decoding the same provider icons once per second.
+        private val outerIconCache = mutableMapOf<Int, Pair<Icon, Drawable>>()
         private val sensorManager = context.getSystemService(Context.SENSOR_SERVICE) as SensorManager
         private val rotation = sensorManager.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR)
             ?: sensorManager.getDefaultSensor(Sensor.TYPE_GEOMAGNETIC_ROTATION_VECTOR)
@@ -271,15 +278,161 @@ class ArcsCompassService : WatchFaceService() {
             val time = String.format(Locale.getDefault(), "%02d:%02d", h, zonedDateTime.minute)
             text(canvas, time, 233f, 228f, 99f, if (ambient) muted else fg,
                 if (ambient) Typeface.NORMAL else Typeface.BOLD)
+            if (!ambient) drawOuterComplicationLabels(canvas)
             canvas.restoreToCount(saved)
             if (!ambient) {
-                // These bounds are normalized to the real canvas, not the 466-unit drawing.
-                for (slot in slots.complicationSlots.values) {
-                    if (slot.enabled) {
+                // Only the two center circles use the standard complication
+                // renderer. The four edge slots remain configurable/tappable,
+                // but their icon and value are rendered tangentially above.
+                for (id in 1..2) {
+                    val slot = slots[id]
+                    if (slot != null && slot.enabled) {
                         slot.render(canvas, zonedDateTime, renderParameters)
                     }
                 }
             }
+        }
+
+        /**
+         * Quadrant labels ride along the arc instead of being drawn into
+         * rectangular complication boxes. The angles are measured clockwise
+         * from 12 o'clock. For lower quadrants, rotate by angle - 180 so
+         * glyphs remain readable left-to-right.
+         *
+         * Rendering remains independent from the slot bounds; the original
+         * slots are still available to edit and launch their providers.
+         */
+        private fun drawOuterComplicationLabels(canvas: Canvas) {
+            // upper-left, upper-right, lower-right, lower-left
+            val data = arrayOf(
+                Triple(3, 317f, orange),
+                Triple(4, 43f, green),
+                Triple(6, 137f, cyan),
+                Triple(5, 223f, green)
+            )
+            for ((id, bearing, tint) in data) {
+                val slot = slots[id] ?: continue
+                if (!slot.enabled) continue
+
+                val complication = slot.complicationData.value
+                val value = outerValue(id, complication) ?: continue
+
+                val theta = Math.toRadians(bearing.toDouble())
+                val radius = 180f
+                val x = 233f + sin(theta).toFloat() * radius
+                val y = 233f - cos(theta).toFloat() * radius
+                val tangentRotation = if (bearing > 90f && bearing < 270f) {
+                    bearing - 180f
+                } else {
+                    bearing
+                }
+
+                val save = canvas.save()
+                canvas.translate(x, y)
+                canvas.rotate(tangentRotation)
+
+                p.reset()
+                p.isAntiAlias = true
+                p.style = Paint.Style.FILL
+                p.color = fg
+                p.typeface = Typeface.create("sans-serif", Typeface.BOLD)
+                p.textSize = if (value.length > 6) 17f else 21f
+                p.textAlign = Paint.Align.LEFT
+
+                val valueWidth = p.measureText(value)
+                val iconSize = 21f
+                val gap = 7f
+                val total = iconSize + gap + valueWidth
+                val iconX = -total / 2f
+                val valueX = iconX + iconSize + gap
+                drawOuterIcon(canvas, id, complication, iconX, -iconSize / 2f, tint)
+                p.color = fg
+                canvas.drawText(value, valueX, 7f, p)
+                canvas.restoreToCount(save)
+            }
+        }
+
+        private fun outerValue(id: Int, data: ComplicationData?): String? {
+            fun clean(raw: String): String? =
+                raw.trim().takeIf { it.isNotEmpty() && it != "--" }
+            val value = when (data) {
+                is ShortTextComplicationData ->
+                    clean(data.text.getTextAt(context.resources, Instant.now()).toString())
+                is RangedValueComplicationData ->
+                    clean(data.text?.getTextAt(context.resources, Instant.now()).toString())
+                        ?.takeUnless { it == "null" }
+                        ?: String.format(Locale.US, "%.0f", data.value)
+                is GoalProgressComplicationData ->
+                    clean(data.text?.getTextAt(context.resources, Instant.now()).toString())
+                        ?.takeUnless { it == "null" }
+                        ?: String.format(Locale.US, "%.0f", data.value)
+                else -> null
+            }
+            if (value != null) return value
+            // Without a provider value, show only reliably-known system data.
+            return when (id) {
+                4, 6 -> batteryProgress()?.let { "${(it * 100).toInt()}%" }
+                3 -> slots[1]?.complicationData?.value?.let {
+                    if (it is ShortTextComplicationData)
+                        clean(it.text.getTextAt(context.resources, Instant.now()).toString())
+                    else null
+                }
+                else -> null
+            }
+        }
+
+        private fun outerIcon(data: ComplicationData?): Icon? = when (data) {
+            is ShortTextComplicationData -> data.monochromaticImage?.image
+            is RangedValueComplicationData -> data.monochromaticImage?.image
+            is GoalProgressComplicationData -> data.monochromaticImage?.image
+            is MonochromaticImageComplicationData -> data.monochromaticImage.image
+            is SmallImageComplicationData -> data.smallImage.image
+            else -> null
+        }
+
+        private fun drawOuterIcon(
+            canvas: Canvas, id: Int, data: ComplicationData?,
+            left: Float, top: Float, color: Int
+        ) {
+            val icon = outerIcon(data)
+            if (icon != null) {
+                val previous = outerIconCache[id]
+                val drawable = if (previous?.first == icon) previous.second
+                    else runCatching { icon.loadDrawable(context)?.mutate() }.getOrNull()?.also {
+                        outerIconCache[id] = icon to it
+                    }
+                if (drawable != null) {
+                    val save = canvas.save()
+                    canvas.translate(left, top)
+                    drawable.setTint(color)
+                    drawable.setBounds(0, 0, 21, 21)
+                    drawable.draw(canvas)
+                    canvas.restoreToCount(save)
+                    return
+                }
+            }
+            // Fallback vector glyphs for providers without an icon.
+            p.style = Paint.Style.STROKE
+            p.strokeWidth = 2.5f
+            p.strokeCap = Paint.Cap.ROUND
+            p.color = color
+            if (id == 4 || id == 6) {
+                canvas.drawRoundRect(left + 1f, top + 3f, left + 17f,
+                    top + 18f, 3f, 3f, p)
+                p.style = Paint.Style.FILL
+                canvas.drawRect(left + 18f, top + 8f, left + 21f,
+                    top + 13f, p)
+            } else if (id == 5) {
+                canvas.drawRoundRect(left + 2f, top + 3f, left + 19f,
+                    top + 19f, 2f, 2f, p)
+                canvas.drawLine(left + 3f, top + 8f, left + 18f, top + 8f, p)
+            } else {
+                // Two minimal footprints, recognizable at ~20px.
+                p.style = Paint.Style.FILL
+                canvas.drawOval(left + 2f, top + 10f, left + 9f, top + 19f, p)
+                canvas.drawOval(left + 11f, top + 2f, left + 18f, top + 11f, p)
+            }
+            p.style = Paint.Style.FILL
         }
 
         private fun circles(canvas: Canvas) {
