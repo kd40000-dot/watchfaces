@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?><resources>
+  <string name="app_name">Arcs Dracula Live Compass</string>
+  <string name="slot_1">Left central complication</string>
+  <string name="slot_2">Right central complication</string>
+  <string name="slot_3">Upper left complication</string>
+  <string name="slot_4">Upper right complication</string>
+  <string name="slot_5">Lower left complication</string>
+  <string name="slot_6">Lower right complication</string>
+</resources>
