@@ -44,8 +44,6 @@
 <Arc centerX="233" centerY="233" width="406" height="406" startAngle="188" endAngle="255"><Stroke color="#ff44475a" thickness="10" cap="ROUND"/></Arc><Arc centerX="233" centerY="233" width="406" height="406" startAngle="188" endAngle="188"><Transform target="endAngle" value="188 + [STEP_PERCENT] * 0.67"/><Stroke color="#ff8be9fd" thickness="10" cap="ROUND"/></Arc></PartDraw>
   </Group>
   <!-- Date and time preserve the source face's central geometry. -->
-  <PartText x="95" y="100" width="276" height="42"><Text align="CENTER"><Font family="SYNC_TO_DEVICE" weight="NORMAL" size="29" color="#fff8f8f2"><Template><![CDATA[%s]]><Parameter expression="[DAY_OF_WEEK_S]"/></Template></Font></Text><Variant mode="AMBIENT" target="alpha" value="0"/></PartText>
-  <PartText x="208" y="98" width="172" height="42" alpha="0"><Text align="CENTER"><Font family="SYNC_TO_DEVICE" weight="NORMAL" size="29" color="#fff8f8f2"><Template><![CDATA[%s]]><Parameter expression="[MONTH_S]"/></Template></Font></Text><Variant mode="AMBIENT" target="alpha" value="0"/></PartText>
   <PartText x="99" y="102" width="268" height="45">
     <Variant mode="AMBIENT" target="alpha" value="0"/>
     <Text align="CENTER"><Font family="SYNC_TO_DEVICE" size="28" color="#fff8f8f2">
