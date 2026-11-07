@@ -4,6 +4,11 @@
 <Metadata key="CLOCK_TYPE" value="DIGITAL"/>
 <Metadata key="PREVIEW_TIME" value="09:30:00"/>
 <Scene backgroundColor="#ff282a36">
+  <!-- In ambient, paint the round OLED dial black; all ornament groups hide. -->
+  <PartDraw x="0" y="0" width="466" height="466" alpha="0">
+    <Variant mode="AMBIENT" target="alpha" value="255"/>
+    <Ellipse x="0" y="0" width="466" height="466"><Fill color="#ff000000"/></Ellipse>
+  </PartDraw>
   <!-- Thin outer 360-degree compass-style bezel; fixed relative to the watch. -->
   <Group name="fixed_compass_bezel" x="0" y="0" width="466" height="466">
     <Variant mode="AMBIENT" target="alpha" value="0"/>
@@ -52,7 +57,12 @@
   </PartText>
   <DigitalClock x="53" y="137" width="360" height="99">
     <TimeText x="0" y="0" width="360" height="99" format="hh:mm" hourFormat="SYNC_TO_DEVICE" align="CENTER">
+      <Variant mode="AMBIENT" target="alpha" value="0"/>
       <Font family="SYNC_TO_DEVICE" weight="NORMAL" size="90" color="#fff8f8f2"/>
+    </TimeText>
+    <TimeText x="0" y="0" width="360" height="99" format="hh:mm" hourFormat="SYNC_TO_DEVICE" align="CENTER" alpha="0">
+      <Variant mode="AMBIENT" target="alpha" value="255"/>
+      <Font family="SYNC_TO_DEVICE" weight="THIN" size="89" color="#ff6272a4"/>
     </TimeText>
   </DigitalClock>
   <!-- Centered circular application complication backgrounds. -->
