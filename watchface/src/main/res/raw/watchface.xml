@@ -38,10 +38,10 @@
   <!-- Four live arcs match Arcs' four edge positions and Dracula accent colors. -->
   <Group name="arcs" x="0" y="0" width="466" height="466">
     <Variant mode="AMBIENT" target="alpha" value="0"/>
-    <PartDraw x="0" y="0" width="466" height="466"><Arc centerX="233" centerY="233" width="406" height="406" startAngle="285" endAngle="352"><Stroke color="#ff44475a" thickness="10" cap="ROUND"/></Arc><Arc centerX="233" centerY="233" width="406" height="406" startAngle="285" endAngle="285"><Transform target="endAngle" value="285 + [STEP_PERCENT] * 0.67"/><Stroke color="#ffffb86c" thickness="10" cap="ROUND"/></Arc>
-<Arc centerX="233" centerY="233" width="406" height="406" startAngle="8" endAngle="75"><Stroke color="#ff44475a" thickness="10" cap="ROUND"/></Arc><Arc centerX="233" centerY="233" width="406" height="406" startAngle="8" endAngle="8"><Transform target="endAngle" value="8 + [BATTERY_PERCENT] * 0.67"/><Stroke color="#ff50fa7b" thickness="10" cap="ROUND"/></Arc>
-<Arc centerX="233" centerY="233" width="406" height="406" startAngle="105" endAngle="172"><Stroke color="#ff44475a" thickness="10" cap="ROUND"/></Arc><Arc centerX="233" centerY="233" width="406" height="406" startAngle="105" endAngle="105"><Transform target="endAngle" value="105 + clamp([HEART_RATE] / 180, 0, 1) * 67"/><Stroke color="#ffbd93f9" thickness="10" cap="ROUND"/></Arc>
-<Arc centerX="233" centerY="233" width="406" height="406" startAngle="188" endAngle="255"><Stroke color="#ff44475a" thickness="10" cap="ROUND"/></Arc><Arc centerX="233" centerY="233" width="406" height="406" startAngle="188" endAngle="188"><Transform target="endAngle" value="188 + [STEP_PERCENT] * 0.67"/><Stroke color="#ff8be9fd" thickness="10" cap="ROUND"/></Arc></PartDraw>
+    <PartDraw x="0" y="0" width="466" height="466"><Arc centerX="233" centerY="233" width="406" height="406" startAngle="285" endAngle="352"><Stroke color="#ff44475a" thickness="10" cap="ROUND"/></Arc>
+<Arc centerX="233" centerY="233" width="406" height="406" startAngle="8" endAngle="75"><Stroke color="#ff44475a" thickness="10" cap="ROUND"/></Arc>
+<Arc centerX="233" centerY="233" width="406" height="406" startAngle="105" endAngle="172"><Stroke color="#ff44475a" thickness="10" cap="ROUND"/></Arc>
+<Arc centerX="233" centerY="233" width="406" height="406" startAngle="188" endAngle="255"><Stroke color="#ff44475a" thickness="10" cap="ROUND"/></Arc></PartDraw>
   </Group>
   <!-- Date and time preserve the source face's central geometry. -->
   <PartText x="99" y="102" width="268" height="45">
@@ -64,9 +64,113 @@
   <!-- Six independently selectable complications: two center, four quadrants. -->
   <ComplicationSlot slotId="1" displayName="@string/slot_1" supportedTypes="SHORT_TEXT RANGED_VALUE GOAL_PROGRESS MONOCHROMATIC_IMAGE SMALL_IMAGE EMPTY" x="109" y="263" width="112" height="92"><DefaultProviderPolicy defaultSystemProvider="STEP_COUNT" defaultSystemProviderType="SHORT_TEXT"/><BoundingOval x="0" y="0" width="112" height="92"/><Complication type="SHORT_TEXT"><PartText x="0" y="0" width="112" height="92"><Text align="CENTER" ellipsis="TRUE"><Font family="SYNC_TO_DEVICE" size="34" color="#ff50fa7b"><Template><![CDATA[%s]]><Parameter expression="[COMPLICATION.TEXT]"/></Template></Font></Text><Variant mode="AMBIENT" target="alpha" value="0"/></PartText></Complication><Complication type="RANGED_VALUE"><PartText x="0" y="0" width="112" height="92"><Text align="CENTER" ellipsis="TRUE"><Font family="SYNC_TO_DEVICE" size="30" color="#ff50fa7b"><Template><![CDATA[%s]]><Parameter expression="[COMPLICATION.TEXT]"/></Template></Font></Text><Variant mode="AMBIENT" target="alpha" value="0"/></PartText></Complication><Complication type="GOAL_PROGRESS"><PartText x="0" y="0" width="112" height="92"><Text align="CENTER" ellipsis="TRUE"><Font family="SYNC_TO_DEVICE" size="30" color="#ff50fa7b"><Template><![CDATA[%s]]><Parameter expression="[COMPLICATION.TEXT]"/></Template></Font></Text><Variant mode="AMBIENT" target="alpha" value="0"/></PartText></Complication><Complication type="MONOCHROMATIC_IMAGE"><PartImage x="28" y="23" width="56" height="46" tintColor="#ff50fa7b"><Image resource="[COMPLICATION.MONOCHROMATIC_IMAGE]"/></PartImage></Complication><Complication type="SMALL_IMAGE"><PartImage x="25" y="18" width="63" height="55"><Image resource="[COMPLICATION.SMALL_IMAGE]"/></PartImage></Complication></ComplicationSlot>
   <ComplicationSlot slotId="2" displayName="@string/slot_2" supportedTypes="SHORT_TEXT RANGED_VALUE GOAL_PROGRESS MONOCHROMATIC_IMAGE SMALL_IMAGE EMPTY" x="245" y="263" width="112" height="92"><DefaultProviderPolicy defaultSystemProvider="HEART_RATE" defaultSystemProviderType="SHORT_TEXT"/><BoundingOval x="0" y="0" width="112" height="92"/><Complication type="SHORT_TEXT"><PartText x="0" y="0" width="112" height="92"><Text align="CENTER" ellipsis="TRUE"><Font family="SYNC_TO_DEVICE" size="34" color="#ffff79c6"><Template><![CDATA[%s]]><Parameter expression="[COMPLICATION.TEXT]"/></Template></Font></Text><Variant mode="AMBIENT" target="alpha" value="0"/></PartText></Complication><Complication type="RANGED_VALUE"><PartText x="0" y="0" width="112" height="92"><Text align="CENTER" ellipsis="TRUE"><Font family="SYNC_TO_DEVICE" size="30" color="#ffff79c6"><Template><![CDATA[%s]]><Parameter expression="[COMPLICATION.TEXT]"/></Template></Font></Text><Variant mode="AMBIENT" target="alpha" value="0"/></PartText></Complication><Complication type="GOAL_PROGRESS"><PartText x="0" y="0" width="112" height="92"><Text align="CENTER" ellipsis="TRUE"><Font family="SYNC_TO_DEVICE" size="30" color="#ffff79c6"><Template><![CDATA[%s]]><Parameter expression="[COMPLICATION.TEXT]"/></Template></Font></Text><Variant mode="AMBIENT" target="alpha" value="0"/></PartText></Complication><Complication type="MONOCHROMATIC_IMAGE"><PartImage x="28" y="23" width="56" height="46" tintColor="#ffff79c6"><Image resource="[COMPLICATION.MONOCHROMATIC_IMAGE]"/></PartImage></Complication><Complication type="SMALL_IMAGE"><PartImage x="25" y="18" width="63" height="55"><Image resource="[COMPLICATION.SMALL_IMAGE]"/></PartImage></Complication></ComplicationSlot>
-  <ComplicationSlot slotId="3" displayName="@string/slot_3" supportedTypes="SHORT_TEXT RANGED_VALUE GOAL_PROGRESS MONOCHROMATIC_IMAGE SMALL_IMAGE EMPTY" x="53" y="80" width="120" height="51"><DefaultProviderPolicy defaultSystemProvider="STEP_COUNT" defaultSystemProviderType="SHORT_TEXT"/><BoundingOval x="0" y="0" width="120" height="51"/><Complication type="SHORT_TEXT"><PartText x="0" y="0" width="120" height="51"><Text align="CENTER" ellipsis="TRUE"><Font family="SYNC_TO_DEVICE" size="24" color="#ffffb86c"><Template><![CDATA[%s]]><Parameter expression="[COMPLICATION.TEXT]"/></Template></Font></Text><Variant mode="AMBIENT" target="alpha" value="0"/></PartText></Complication><Complication type="RANGED_VALUE"><PartText x="0" y="0" width="120" height="51"><Text align="CENTER" ellipsis="TRUE"><Font family="SYNC_TO_DEVICE" size="22" color="#ffffb86c"><Template><![CDATA[%s]]><Parameter expression="[COMPLICATION.TEXT]"/></Template></Font></Text><Variant mode="AMBIENT" target="alpha" value="0"/></PartText></Complication><Complication type="GOAL_PROGRESS"><PartText x="0" y="0" width="120" height="51"><Text align="CENTER" ellipsis="TRUE"><Font family="SYNC_TO_DEVICE" size="22" color="#ffffb86c"><Template><![CDATA[%s]]><Parameter expression="[COMPLICATION.TEXT]"/></Template></Font></Text><Variant mode="AMBIENT" target="alpha" value="0"/></PartText></Complication><Complication type="MONOCHROMATIC_IMAGE"><PartImage x="30" y="13" width="60" height="26" tintColor="#ffffb86c"><Image resource="[COMPLICATION.MONOCHROMATIC_IMAGE]"/></PartImage></Complication><Complication type="SMALL_IMAGE"><PartImage x="26" y="10" width="67" height="31"><Image resource="[COMPLICATION.SMALL_IMAGE]"/></PartImage></Complication></ComplicationSlot>
-  <ComplicationSlot slotId="4" displayName="@string/slot_4" supportedTypes="SHORT_TEXT RANGED_VALUE GOAL_PROGRESS MONOCHROMATIC_IMAGE SMALL_IMAGE EMPTY" x="294" y="80" width="120" height="51"><DefaultProviderPolicy defaultSystemProvider="WATCH_BATTERY" defaultSystemProviderType="SHORT_TEXT"/><BoundingOval x="0" y="0" width="120" height="51"/><Complication type="SHORT_TEXT"><PartText x="0" y="0" width="120" height="51"><Text align="CENTER" ellipsis="TRUE"><Font family="SYNC_TO_DEVICE" size="24" color="#ff50fa7b"><Template><![CDATA[%s]]><Parameter expression="[COMPLICATION.TEXT]"/></Template></Font></Text><Variant mode="AMBIENT" target="alpha" value="0"/></PartText></Complication><Complication type="RANGED_VALUE"><PartText x="0" y="0" width="120" height="51"><Text align="CENTER" ellipsis="TRUE"><Font family="SYNC_TO_DEVICE" size="22" color="#ff50fa7b"><Template><![CDATA[%s]]><Parameter expression="[COMPLICATION.TEXT]"/></Template></Font></Text><Variant mode="AMBIENT" target="alpha" value="0"/></PartText></Complication><Complication type="GOAL_PROGRESS"><PartText x="0" y="0" width="120" height="51"><Text align="CENTER" ellipsis="TRUE"><Font family="SYNC_TO_DEVICE" size="22" color="#ff50fa7b"><Template><![CDATA[%s]]><Parameter expression="[COMPLICATION.TEXT]"/></Template></Font></Text><Variant mode="AMBIENT" target="alpha" value="0"/></PartText></Complication><Complication type="MONOCHROMATIC_IMAGE"><PartImage x="30" y="13" width="60" height="26" tintColor="#ff50fa7b"><Image resource="[COMPLICATION.MONOCHROMATIC_IMAGE]"/></PartImage></Complication><Complication type="SMALL_IMAGE"><PartImage x="26" y="10" width="67" height="31"><Image resource="[COMPLICATION.SMALL_IMAGE]"/></PartImage></Complication></ComplicationSlot>
-  <ComplicationSlot slotId="5" displayName="@string/slot_5" supportedTypes="SHORT_TEXT RANGED_VALUE GOAL_PROGRESS MONOCHROMATIC_IMAGE SMALL_IMAGE EMPTY" x="40" y="340" width="120" height="51"><DefaultProviderPolicy defaultSystemProvider="STEP_COUNT" defaultSystemProviderType="SHORT_TEXT"/><BoundingOval x="0" y="0" width="120" height="51"/><Complication type="SHORT_TEXT"><PartText x="0" y="0" width="120" height="51"><Text align="CENTER" ellipsis="TRUE"><Font family="SYNC_TO_DEVICE" size="24" color="#ff8be9fd"><Template><![CDATA[%s]]><Parameter expression="[COMPLICATION.TEXT]"/></Template></Font></Text><Variant mode="AMBIENT" target="alpha" value="0"/></PartText></Complication><Complication type="RANGED_VALUE"><PartText x="0" y="0" width="120" height="51"><Text align="CENTER" ellipsis="TRUE"><Font family="SYNC_TO_DEVICE" size="22" color="#ff8be9fd"><Template><![CDATA[%s]]><Parameter expression="[COMPLICATION.TEXT]"/></Template></Font></Text><Variant mode="AMBIENT" target="alpha" value="0"/></PartText></Complication><Complication type="GOAL_PROGRESS"><PartText x="0" y="0" width="120" height="51"><Text align="CENTER" ellipsis="TRUE"><Font family="SYNC_TO_DEVICE" size="22" color="#ff8be9fd"><Template><![CDATA[%s]]><Parameter expression="[COMPLICATION.TEXT]"/></Template></Font></Text><Variant mode="AMBIENT" target="alpha" value="0"/></PartText></Complication><Complication type="MONOCHROMATIC_IMAGE"><PartImage x="30" y="13" width="60" height="26" tintColor="#ff8be9fd"><Image resource="[COMPLICATION.MONOCHROMATIC_IMAGE]"/></PartImage></Complication><Complication type="SMALL_IMAGE"><PartImage x="26" y="10" width="67" height="31"><Image resource="[COMPLICATION.SMALL_IMAGE]"/></PartImage></Complication></ComplicationSlot>
-  <ComplicationSlot slotId="6" displayName="@string/slot_6" supportedTypes="SHORT_TEXT RANGED_VALUE GOAL_PROGRESS MONOCHROMATIC_IMAGE SMALL_IMAGE EMPTY" x="303" y="340" width="120" height="51"><DefaultProviderPolicy defaultSystemProvider="HEART_RATE" defaultSystemProviderType="SHORT_TEXT"/><BoundingOval x="0" y="0" width="120" height="51"/><Complication type="SHORT_TEXT"><PartText x="0" y="0" width="120" height="51"><Text align="CENTER" ellipsis="TRUE"><Font family="SYNC_TO_DEVICE" size="24" color="#ffbd93f9"><Template><![CDATA[%s]]><Parameter expression="[COMPLICATION.TEXT]"/></Template></Font></Text><Variant mode="AMBIENT" target="alpha" value="0"/></PartText></Complication><Complication type="RANGED_VALUE"><PartText x="0" y="0" width="120" height="51"><Text align="CENTER" ellipsis="TRUE"><Font family="SYNC_TO_DEVICE" size="22" color="#ffbd93f9"><Template><![CDATA[%s]]><Parameter expression="[COMPLICATION.TEXT]"/></Template></Font></Text><Variant mode="AMBIENT" target="alpha" value="0"/></PartText></Complication><Complication type="GOAL_PROGRESS"><PartText x="0" y="0" width="120" height="51"><Text align="CENTER" ellipsis="TRUE"><Font family="SYNC_TO_DEVICE" size="22" color="#ffbd93f9"><Template><![CDATA[%s]]><Parameter expression="[COMPLICATION.TEXT]"/></Template></Font></Text><Variant mode="AMBIENT" target="alpha" value="0"/></PartText></Complication><Complication type="MONOCHROMATIC_IMAGE"><PartImage x="30" y="13" width="60" height="26" tintColor="#ffbd93f9"><Image resource="[COMPLICATION.MONOCHROMATIC_IMAGE]"/></PartImage></Complication><Complication type="SMALL_IMAGE"><PartImage x="26" y="10" width="67" height="31"><Image resource="[COMPLICATION.SMALL_IMAGE]"/></PartImage></Complication></ComplicationSlot>
+  <ComplicationSlot slotId="3" displayName="@string/slot_3" x="0" y="0" width="233" height="233" supportedTypes="SHORT_TEXT RANGED_VALUE GOAL_PROGRESS MONOCHROMATIC_IMAGE SMALL_IMAGE EMPTY">
+   <DefaultProviderPolicy defaultSystemProvider="STEP_COUNT" defaultSystemProviderType="SHORT_TEXT"/>
+   <BoundingOval x="53" y="80" width="120" height="51"/>
+   <Complication type="SHORT_TEXT"><PartDraw x="0" y="0" width="233" height="233">
+  <Arc centerX="233" centerY="233" width="406" height="406" startAngle="285" endAngle="285">
+    <Transform target="endAngle" value="285 + [STEP_PERCENT]/100 * 67"/>
+    <Stroke color="#ffffb86c" thickness="10" cap="ROUND"/>
+  </Arc>
+  <Variant mode="AMBIENT" target="alpha" value="0"/>
+</PartDraw><PartText x="53" y="80" width="120" height="51"><Variant mode="AMBIENT" target="alpha" value="0"/><Text align="CENTER" ellipsis="TRUE"><Font family="SYNC_TO_DEVICE" size="25" color="#ffffb86c"><Template><![CDATA[%s]]><Parameter expression="[COMPLICATION.TEXT]"/></Template></Font></Text></PartText></Complication>
+   <Complication type="RANGED_VALUE"><PartDraw x="0" y="0" width="233" height="233">
+  <Arc centerX="233" centerY="233" width="406" height="406" startAngle="285" endAngle="285">
+    <Transform target="endAngle" value="285 + clamp(([COMPLICATION.RANGED_VALUE_VALUE] - [COMPLICATION.RANGED_VALUE_MIN]) / ([COMPLICATION.RANGED_VALUE_MAX] - [COMPLICATION.RANGED_VALUE_MIN]), 0, 1) * 67"/>
+    <Stroke color="#ffffb86c" thickness="10" cap="ROUND"/>
+  </Arc>
+  <Variant mode="AMBIENT" target="alpha" value="0"/>
+</PartDraw><PartText x="53" y="80" width="120" height="51"><Variant mode="AMBIENT" target="alpha" value="0"/><Text align="CENTER" ellipsis="TRUE"><Font family="SYNC_TO_DEVICE" size="25" color="#ffffb86c"><Template><![CDATA[%d%%]]><Parameter expression="round(clamp(([COMPLICATION.RANGED_VALUE_VALUE] - [COMPLICATION.RANGED_VALUE_MIN]) / ([COMPLICATION.RANGED_VALUE_MAX] - [COMPLICATION.RANGED_VALUE_MIN]), 0, 1) * 100)"/></Template></Font></Text></PartText></Complication>
+   <Complication type="GOAL_PROGRESS"><PartDraw x="0" y="0" width="233" height="233">
+  <Arc centerX="233" centerY="233" width="406" height="406" startAngle="285" endAngle="285">
+    <Transform target="endAngle" value="285 + clamp([COMPLICATION.GOAL_PROGRESS_VALUE] / [COMPLICATION.GOAL_PROGRESS_TARGET_VALUE], 0, 1) * 67"/>
+    <Stroke color="#ffffb86c" thickness="10" cap="ROUND"/>
+  </Arc>
+  <Variant mode="AMBIENT" target="alpha" value="0"/>
+</PartDraw><PartText x="53" y="80" width="120" height="51"><Variant mode="AMBIENT" target="alpha" value="0"/><Text align="CENTER" ellipsis="TRUE"><Font family="SYNC_TO_DEVICE" size="25" color="#ffffb86c"><Template><![CDATA[%d%%]]><Parameter expression="round(clamp([COMPLICATION.GOAL_PROGRESS_VALUE] / [COMPLICATION.GOAL_PROGRESS_TARGET_VALUE], 0, 1) * 100)"/></Template></Font></Text></PartText></Complication>
+   <Complication type="MONOCHROMATIC_IMAGE"><PartImage x="95" y="88" width="36" height="36" tintColor="#ffffb86c"><Image resource="[COMPLICATION.MONOCHROMATIC_IMAGE]"/></PartImage></Complication>
+   <Complication type="SMALL_IMAGE"><PartImage x="95" y="88" width="36" height="36"><Image resource="[COMPLICATION.SMALL_IMAGE]"/></PartImage></Complication>
+ </ComplicationSlot>
+  <ComplicationSlot slotId="4" displayName="@string/slot_4" x="233" y="0" width="233" height="233" supportedTypes="SHORT_TEXT RANGED_VALUE GOAL_PROGRESS MONOCHROMATIC_IMAGE SMALL_IMAGE EMPTY">
+   <DefaultProviderPolicy defaultSystemProvider="WATCH_BATTERY" defaultSystemProviderType="SHORT_TEXT"/>
+   <BoundingOval x="61" y="80" width="120" height="51"/>
+   <Complication type="SHORT_TEXT"><PartDraw x="0" y="0" width="233" height="233">
+  <Arc centerX="0" centerY="233" width="406" height="406" startAngle="8" endAngle="8">
+    <Transform target="endAngle" value="8 + [BATTERY_PERCENT]/100 * 67"/>
+    <Stroke color="#ff50fa7b" thickness="10" cap="ROUND"/>
+  </Arc>
+  <Variant mode="AMBIENT" target="alpha" value="0"/>
+</PartDraw><PartText x="61" y="80" width="120" height="51"><Variant mode="AMBIENT" target="alpha" value="0"/><Text align="CENTER" ellipsis="TRUE"><Font family="SYNC_TO_DEVICE" size="25" color="#ff50fa7b"><Template><![CDATA[%s]]><Parameter expression="[COMPLICATION.TEXT]"/></Template></Font></Text></PartText></Complication>
+   <Complication type="RANGED_VALUE"><PartDraw x="0" y="0" width="233" height="233">
+  <Arc centerX="0" centerY="233" width="406" height="406" startAngle="8" endAngle="8">
+    <Transform target="endAngle" value="8 + clamp(([COMPLICATION.RANGED_VALUE_VALUE] - [COMPLICATION.RANGED_VALUE_MIN]) / ([COMPLICATION.RANGED_VALUE_MAX] - [COMPLICATION.RANGED_VALUE_MIN]), 0, 1) * 67"/>
+    <Stroke color="#ff50fa7b" thickness="10" cap="ROUND"/>
+  </Arc>
+  <Variant mode="AMBIENT" target="alpha" value="0"/>
+</PartDraw><PartText x="61" y="80" width="120" height="51"><Variant mode="AMBIENT" target="alpha" value="0"/><Text align="CENTER" ellipsis="TRUE"><Font family="SYNC_TO_DEVICE" size="25" color="#ff50fa7b"><Template><![CDATA[%d%%]]><Parameter expression="round(clamp(([COMPLICATION.RANGED_VALUE_VALUE] - [COMPLICATION.RANGED_VALUE_MIN]) / ([COMPLICATION.RANGED_VALUE_MAX] - [COMPLICATION.RANGED_VALUE_MIN]), 0, 1) * 100)"/></Template></Font></Text></PartText></Complication>
+   <Complication type="GOAL_PROGRESS"><PartDraw x="0" y="0" width="233" height="233">
+  <Arc centerX="0" centerY="233" width="406" height="406" startAngle="8" endAngle="8">
+    <Transform target="endAngle" value="8 + clamp([COMPLICATION.GOAL_PROGRESS_VALUE] / [COMPLICATION.GOAL_PROGRESS_TARGET_VALUE], 0, 1) * 67"/>
+    <Stroke color="#ff50fa7b" thickness="10" cap="ROUND"/>
+  </Arc>
+  <Variant mode="AMBIENT" target="alpha" value="0"/>
+</PartDraw><PartText x="61" y="80" width="120" height="51"><Variant mode="AMBIENT" target="alpha" value="0"/><Text align="CENTER" ellipsis="TRUE"><Font family="SYNC_TO_DEVICE" size="25" color="#ff50fa7b"><Template><![CDATA[%d%%]]><Parameter expression="round(clamp([COMPLICATION.GOAL_PROGRESS_VALUE] / [COMPLICATION.GOAL_PROGRESS_TARGET_VALUE], 0, 1) * 100)"/></Template></Font></Text></PartText></Complication>
+   <Complication type="MONOCHROMATIC_IMAGE"><PartImage x="103" y="88" width="36" height="36" tintColor="#ff50fa7b"><Image resource="[COMPLICATION.MONOCHROMATIC_IMAGE]"/></PartImage></Complication>
+   <Complication type="SMALL_IMAGE"><PartImage x="103" y="88" width="36" height="36"><Image resource="[COMPLICATION.SMALL_IMAGE]"/></PartImage></Complication>
+ </ComplicationSlot>
+  <ComplicationSlot slotId="5" displayName="@string/slot_5" x="0" y="233" width="233" height="233" supportedTypes="SHORT_TEXT RANGED_VALUE GOAL_PROGRESS MONOCHROMATIC_IMAGE SMALL_IMAGE EMPTY">
+   <DefaultProviderPolicy defaultSystemProvider="STEP_COUNT" defaultSystemProviderType="SHORT_TEXT"/>
+   <BoundingOval x="40" y="107" width="120" height="51"/>
+   <Complication type="SHORT_TEXT"><PartDraw x="0" y="0" width="233" height="233">
+  <Arc centerX="233" centerY="0" width="406" height="406" startAngle="188" endAngle="188">
+    <Transform target="endAngle" value="188 + [STEP_PERCENT]/100 * 67"/>
+    <Stroke color="#ff8be9fd" thickness="10" cap="ROUND"/>
+  </Arc>
+  <Variant mode="AMBIENT" target="alpha" value="0"/>
+</PartDraw><PartText x="40" y="107" width="120" height="51"><Variant mode="AMBIENT" target="alpha" value="0"/><Text align="CENTER" ellipsis="TRUE"><Font family="SYNC_TO_DEVICE" size="25" color="#ff8be9fd"><Template><![CDATA[%s]]><Parameter expression="[COMPLICATION.TEXT]"/></Template></Font></Text></PartText></Complication>
+   <Complication type="RANGED_VALUE"><PartDraw x="0" y="0" width="233" height="233">
+  <Arc centerX="233" centerY="0" width="406" height="406" startAngle="188" endAngle="188">
+    <Transform target="endAngle" value="188 + clamp(([COMPLICATION.RANGED_VALUE_VALUE] - [COMPLICATION.RANGED_VALUE_MIN]) / ([COMPLICATION.RANGED_VALUE_MAX] - [COMPLICATION.RANGED_VALUE_MIN]), 0, 1) * 67"/>
+    <Stroke color="#ff8be9fd" thickness="10" cap="ROUND"/>
+  </Arc>
+  <Variant mode="AMBIENT" target="alpha" value="0"/>
+</PartDraw><PartText x="40" y="107" width="120" height="51"><Variant mode="AMBIENT" target="alpha" value="0"/><Text align="CENTER" ellipsis="TRUE"><Font family="SYNC_TO_DEVICE" size="25" color="#ff8be9fd"><Template><![CDATA[%d%%]]><Parameter expression="round(clamp(([COMPLICATION.RANGED_VALUE_VALUE] - [COMPLICATION.RANGED_VALUE_MIN]) / ([COMPLICATION.RANGED_VALUE_MAX] - [COMPLICATION.RANGED_VALUE_MIN]), 0, 1) * 100)"/></Template></Font></Text></PartText></Complication>
+   <Complication type="GOAL_PROGRESS"><PartDraw x="0" y="0" width="233" height="233">
+  <Arc centerX="233" centerY="0" width="406" height="406" startAngle="188" endAngle="188">
+    <Transform target="endAngle" value="188 + clamp([COMPLICATION.GOAL_PROGRESS_VALUE] / [COMPLICATION.GOAL_PROGRESS_TARGET_VALUE], 0, 1) * 67"/>
+    <Stroke color="#ff8be9fd" thickness="10" cap="ROUND"/>
+  </Arc>
+  <Variant mode="AMBIENT" target="alpha" value="0"/>
+</PartDraw><PartText x="40" y="107" width="120" height="51"><Variant mode="AMBIENT" target="alpha" value="0"/><Text align="CENTER" ellipsis="TRUE"><Font family="SYNC_TO_DEVICE" size="25" color="#ff8be9fd"><Template><![CDATA[%d%%]]><Parameter expression="round(clamp([COMPLICATION.GOAL_PROGRESS_VALUE] / [COMPLICATION.GOAL_PROGRESS_TARGET_VALUE], 0, 1) * 100)"/></Template></Font></Text></PartText></Complication>
+   <Complication type="MONOCHROMATIC_IMAGE"><PartImage x="82" y="115" width="36" height="36" tintColor="#ff8be9fd"><Image resource="[COMPLICATION.MONOCHROMATIC_IMAGE]"/></PartImage></Complication>
+   <Complication type="SMALL_IMAGE"><PartImage x="82" y="115" width="36" height="36"><Image resource="[COMPLICATION.SMALL_IMAGE]"/></PartImage></Complication>
+ </ComplicationSlot>
+  <ComplicationSlot slotId="6" displayName="@string/slot_6" x="233" y="233" width="233" height="233" supportedTypes="SHORT_TEXT RANGED_VALUE GOAL_PROGRESS MONOCHROMATIC_IMAGE SMALL_IMAGE EMPTY">
+   <DefaultProviderPolicy defaultSystemProvider="HEART_RATE" defaultSystemProviderType="SHORT_TEXT"/>
+   <BoundingOval x="70" y="107" width="120" height="51"/>
+   <Complication type="SHORT_TEXT"><PartDraw x="0" y="0" width="233" height="233">
+  <Arc centerX="0" centerY="0" width="406" height="406" startAngle="105" endAngle="105">
+    <Transform target="endAngle" value="105 + clamp([HEART_RATE]/180,0,1) * 67"/>
+    <Stroke color="#ffbd93f9" thickness="10" cap="ROUND"/>
+  </Arc>
+  <Variant mode="AMBIENT" target="alpha" value="0"/>
+</PartDraw><PartText x="70" y="107" width="120" height="51"><Variant mode="AMBIENT" target="alpha" value="0"/><Text align="CENTER" ellipsis="TRUE"><Font family="SYNC_TO_DEVICE" size="25" color="#ffbd93f9"><Template><![CDATA[%s]]><Parameter expression="[COMPLICATION.TEXT]"/></Template></Font></Text></PartText></Complication>
+   <Complication type="RANGED_VALUE"><PartDraw x="0" y="0" width="233" height="233">
+  <Arc centerX="0" centerY="0" width="406" height="406" startAngle="105" endAngle="105">
+    <Transform target="endAngle" value="105 + clamp(([COMPLICATION.RANGED_VALUE_VALUE] - [COMPLICATION.RANGED_VALUE_MIN]) / ([COMPLICATION.RANGED_VALUE_MAX] - [COMPLICATION.RANGED_VALUE_MIN]), 0, 1) * 67"/>
+    <Stroke color="#ffbd93f9" thickness="10" cap="ROUND"/>
+  </Arc>
+  <Variant mode="AMBIENT" target="alpha" value="0"/>
+</PartDraw><PartText x="70" y="107" width="120" height="51"><Variant mode="AMBIENT" target="alpha" value="0"/><Text align="CENTER" ellipsis="TRUE"><Font family="SYNC_TO_DEVICE" size="25" color="#ffbd93f9"><Template><![CDATA[%d%%]]><Parameter expression="round(clamp(([COMPLICATION.RANGED_VALUE_VALUE] - [COMPLICATION.RANGED_VALUE_MIN]) / ([COMPLICATION.RANGED_VALUE_MAX] - [COMPLICATION.RANGED_VALUE_MIN]), 0, 1) * 100)"/></Template></Font></Text></PartText></Complication>
+   <Complication type="GOAL_PROGRESS"><PartDraw x="0" y="0" width="233" height="233">
+  <Arc centerX="0" centerY="0" width="406" height="406" startAngle="105" endAngle="105">
+    <Transform target="endAngle" value="105 + clamp([COMPLICATION.GOAL_PROGRESS_VALUE] / [COMPLICATION.GOAL_PROGRESS_TARGET_VALUE], 0, 1) * 67"/>
+    <Stroke color="#ffbd93f9" thickness="10" cap="ROUND"/>
+  </Arc>
+  <Variant mode="AMBIENT" target="alpha" value="0"/>
+</PartDraw><PartText x="70" y="107" width="120" height="51"><Variant mode="AMBIENT" target="alpha" value="0"/><Text align="CENTER" ellipsis="TRUE"><Font family="SYNC_TO_DEVICE" size="25" color="#ffbd93f9"><Template><![CDATA[%d%%]]><Parameter expression="round(clamp([COMPLICATION.GOAL_PROGRESS_VALUE] / [COMPLICATION.GOAL_PROGRESS_TARGET_VALUE], 0, 1) * 100)"/></Template></Font></Text></PartText></Complication>
+   <Complication type="MONOCHROMATIC_IMAGE"><PartImage x="112" y="115" width="36" height="36" tintColor="#ffbd93f9"><Image resource="[COMPLICATION.MONOCHROMATIC_IMAGE]"/></PartImage></Complication>
+   <Complication type="SMALL_IMAGE"><PartImage x="112" y="115" width="36" height="36"><Image resource="[COMPLICATION.SMALL_IMAGE]"/></PartImage></Complication>
+ </ComplicationSlot>
 </Scene>
 </WatchFace>
