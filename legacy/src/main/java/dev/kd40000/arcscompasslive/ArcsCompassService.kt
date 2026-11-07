@@ -407,26 +407,56 @@ class ArcsCompassService : WatchFaceService() {
                     return
                 }
             }
-            // Fallback vector glyphs for providers without an icon.
+            // Fallback icons are matched to the NEW six distinct default
+            // data sources. If a custom provider supplies a real icon above,
+            // that icon takes precedence.
             p.style = Paint.Style.STROKE
-            p.strokeWidth = 2.5f
+            p.strokeWidth = 2.3f
             p.strokeCap = Paint.Cap.ROUND
+            p.strokeJoin = Paint.Join.ROUND
             p.color = color
-            if (id == 2 || id == 4 || id == 6) {
-                canvas.drawRoundRect(left + 1f, top + 3f, left + 17f,
-                    top + 18f, 3f, 3f, p)
-                p.style = Paint.Style.FILL
-                canvas.drawRect(left + 18f, top + 8f, left + 21f,
-                    top + 13f, p)
-            } else if (id == 5) {
-                canvas.drawRoundRect(left + 2f, top + 3f, left + 19f,
-                    top + 19f, 2f, 2f, p)
-                canvas.drawLine(left + 3f, top + 8f, left + 18f, top + 8f, p)
-            } else {
-                // Two minimal footprints, recognizable at ~20px.
-                p.style = Paint.Style.FILL
-                canvas.drawOval(left + 2f, top + 10f, left + 9f, top + 19f, p)
-                canvas.drawOval(left + 11f, top + 2f, left + 18f, top + 11f, p)
+            when (id) {
+                1 -> { // Steps / walking
+                    p.style = Paint.Style.FILL
+                    canvas.drawOval(left + 2f, top + 10f, left + 9f, top + 19f, p)
+                    canvas.drawOval(left + 11f, top + 2f, left + 18f, top + 11f, p)
+                }
+                2 -> { // Watch battery
+                    canvas.drawRoundRect(left + 1f, top + 3f,
+                        left + 17f, top + 18f, 3f, 3f, p)
+                    p.style = Paint.Style.FILL
+                    canvas.drawRect(left + 18f, top + 8f,
+                        left + 21f, top + 13f, p)
+                }
+                3 -> { // Notifications, bell
+                    canvas.drawArc(left + 4f, top + 3f, left + 17f,
+                        top + 17f, 185f, 170f, false, p)
+                    canvas.drawLine(left + 3f, top + 17f, left + 18f, top + 17f,p)
+                    p.style = Paint.Style.FILL
+                    canvas.drawCircle(left + 10.5f,top + 19f,1.3f,p)
+                }
+                4 -> { // Sunrise / sunset
+                    canvas.drawArc(left + 4f, top + 5f, left + 17f,
+                        top + 18f, 180f, 180f, false, p)
+                    canvas.drawLine(left + 2f,top + 18f,left + 19f,top + 18f,p)
+                    canvas.drawLine(left + 10.5f,top + 1f,left + 10.5f,top + 5f,p)
+                    canvas.drawLine(left + 2f,top + 6f,left + 5f,top + 9f,p)
+                    canvas.drawLine(left + 19f,top + 6f,left + 16f,top + 9f,p)
+                }
+                5 -> { // World clock
+                    canvas.drawCircle(left + 10.5f,top + 10.5f,8f,p)
+                    canvas.drawLine(left + 10.5f,top + 10.5f,
+                        left + 10.5f,top + 5f,p)
+                    canvas.drawLine(left + 10.5f,top + 10.5f,
+                        left + 15f,top + 13f,p)
+                }
+                6 -> { // Date
+                    canvas.drawRoundRect(left + 2f, top + 3f,
+                        left + 19f, top + 19f, 2f, 2f, p)
+                    canvas.drawLine(left + 3f,top + 8f,left + 18f,top + 8f,p)
+                    canvas.drawLine(left + 7f,top + 1f,left + 7f,top + 5f,p)
+                    canvas.drawLine(left + 14f,top + 1f,left + 14f,top + 5f,p)
+                }
             }
             p.style = Paint.Style.FILL
         }
@@ -486,7 +516,7 @@ class ArcsCompassService : WatchFaceService() {
             val text = data.text.getTextAt(context.resources, Instant.now()).toString().trim()
             // An explicit percent is already a normalized data source. Don't
             // invent progress for a date, count, calendar event, or clock.
-            val match = Regex("""^([0-9]{1,3}(?:[.,][0-9]+)?)\\s*%$""")
+            val match = Regex("""^([0-9]{1,3}(?:[.,][0-9]+)?)\s*%$""")
                 .matchEntire(text)
             if (match != null) {
                 return (match.groupValues[1].replace(',', '.').toFloatOrNull()
