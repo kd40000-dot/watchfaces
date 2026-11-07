@@ -31,12 +31,15 @@ import androidx.wear.watchface.complications.DefaultComplicationDataSourcePolicy
 import androidx.wear.watchface.complications.SystemDataSources
 import androidx.wear.watchface.complications.data.ComplicationExperimental
 import androidx.wear.watchface.complications.data.ComplicationType
+import androidx.wear.watchface.complications.data.ShortTextComplicationData
 import androidx.wear.watchface.complications.data.RangedValueComplicationData
 import androidx.wear.watchface.complications.data.GoalProgressComplicationData
 import androidx.wear.watchface.complications.rendering.CanvasComplicationDrawable
 import androidx.wear.watchface.complications.rendering.ComplicationDrawable
+import androidx.wear.watchface.complications.rendering.ComplicationStyle
 import androidx.wear.watchface.style.CurrentUserStyleRepository
 import androidx.wear.watchface.style.UserStyleSchema
+import java.time.Instant
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
 import java.util.Locale
@@ -58,8 +61,24 @@ import kotlinx.coroutines.launch
  * upgraded OnePlus Watch 2 firmware continues to permit sideloaded legacy faces.
  */
 class ArcsCompassService : WatchFaceService() {
+    // The stock renderer draws dark pill backgrounds and thick outlines over the
+    // Arcs dial. Keep its icon/text support, but remove its background and border.
     private val complicationFactory = CanvasComplicationFactory { state, listener ->
-        CanvasComplicationDrawable(ComplicationDrawable(this), state, listener)
+        val drawable = ComplicationDrawable(this).apply {
+            for (style in listOf(activeStyle, ambientStyle)) {
+                style.backgroundColor = Color.TRANSPARENT
+                style.borderStyle = ComplicationStyle.BORDER_STYLE_NONE
+                style.borderWidth = 0
+                style.textColor = Color.rgb(248, 248, 242)
+                style.titleColor = Color.rgb(189, 147, 249)
+                style.iconColor = Color.rgb(248, 248, 242)
+                style.textSize = 19
+                style.titleSize = 13
+                style.rangedValuePrimaryColor = Color.TRANSPARENT
+                style.rangedValueSecondaryColor = Color.TRANSPARENT
+            }
+        }
+        CanvasComplicationDrawable(drawable, state, listener)
     }
 
     override fun createUserStyleSchema() = UserStyleSchema(emptyList())
@@ -78,10 +97,10 @@ class ArcsCompassService : WatchFaceService() {
         val boxes = listOf(
             RectF(109f/466, 261f/466, 221f/466, 355f/466),
             RectF(245f/466, 261f/466, 357f/466, 355f/466),
-            RectF(54f/466, 95f/466, 173f/466, 134f/466),
-            RectF(294f/466, 95f/466, 413f/466, 134f/466),
-            RectF(42f/466, 350f/466, 161f/466, 389f/466),
-            RectF(305f/466, 350f/466, 424f/466, 389f/466)
+            RectF(54f/466, 66f/466, 173f/466, 103f/466),
+            RectF(294f/466, 66f/466, 413f/466, 103f/466),
+            RectF(45f/466, 347f/466, 162f/466, 385f/466),
+            RectF(304f/466, 347f/466, 421f/466, 385f/466)
         )
         val systemIds = listOf(
             SystemDataSources.DATA_SOURCE_STEP_COUNT,
@@ -276,7 +295,7 @@ class ArcsCompassService : WatchFaceService() {
                 floatArrayOf(285f, 352f), floatArrayOf(8f, 75f),
                 floatArrayOf(105f, 172f), floatArrayOf(188f, 255f)
             )
-            val colors = intArrayOf(orange, green, purple, cyan)
+            val colors = intArrayOf(orange, green, cyan, green)
             val ids = intArrayOf(3, 4, 6, 5)
             p.style = Paint.Style.STROKE
             p.strokeWidth = 10f
@@ -286,11 +305,14 @@ class ArcsCompassService : WatchFaceService() {
                 val sweep = a[1] - a[0]
                 p.color = track
                 canvas.drawArc(rect, start, sweep, false, p)
-                val percentage = complicationProgress(ids[i]) ?: if (ids[i] == 4) {
-                    (context.getSystemService(Context.BATTERY_SERVICE) as BatteryManager)
-                        .getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY)
-                        .takeIf { it >= 0 }?.div(100f)
-                } else null
+                // SHORT_TEXT steps/battery are the default system providers on
+                // OnePlus Watch 2; they do not expose RANGED_VALUE data.
+                // Use known central step count / system battery as fallbacks.
+                val percentage = complicationProgress(ids[i]) ?: when (ids[i]) {
+                    3, 5 -> stepProgress()
+                    4, 6 -> batteryProgress()
+                    else -> null
+                }
                 if (percentage != null) {
                     p.color = colors[i]
                     canvas.drawArc(rect, start, sweep * percentage.coerceIn(0f,1f), false, p)
@@ -309,6 +331,31 @@ class ArcsCompassService : WatchFaceService() {
                     if (data.targetValue > 0f) data.value / data.targetValue else null
                 else -> null
             }?.takeIf { it.isFinite() }?.coerceIn(0f, 1f)
+        }
+
+        private fun batteryProgress(): Float? {
+            val value = (context.getSystemService(Context.BATTERY_SERVICE) as BatteryManager)
+                .getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY)
+            return if (value in 0..100) value / 100f else null
+        }
+
+        private fun stepProgress(): Float? {
+            // Center step complication is the most reliable readout of the
+            // user's chosen step provider. Default reference goal: 8000 steps.
+            for (id in intArrayOf(1, 3)) {
+                val data = slots[id]?.complicationData?.value
+                if (data is RangedValueComplicationData || data is GoalProgressComplicationData) {
+                    val progress = complicationProgress(id)
+                    if (progress != null) return progress
+                }
+                if (data is ShortTextComplicationData) {
+                    val raw = data.text.getTextAt(context.resources, Instant.now()).toString()
+                    val count = raw.filter { it.isDigit() }.toIntOrNull() ?: continue
+                    // Ignore unrelated SHORT_TEXT values such as "07" (day).
+                    if (count in 0..100000) return (count / 8000f).coerceIn(0f, 1f)
+                }
+            }
+            return null
         }
 
         private fun drawCompass(canvas: Canvas) {
@@ -338,13 +385,13 @@ class ArcsCompassService : WatchFaceService() {
             )
             for ((bearing, label, color) in labels) {
                 val angle = Math.toRadians((bearing - offset - 90).toDouble())
-                val x = 233f + cos(angle).toFloat() * 205f
+                val x = 233f + cos(angle).toFloat() * 207f
                 val y = 233f + sin(angle).toFloat() * 205f
-                text(canvas, label, x, y + 9f, 24f, color, Typeface.BOLD)
+                text(canvas, label, x, y + 9f, 20f, color, Typeface.BOLD)
             }
             // Heading readout on the lower open space, live and suppressed if unavailable.
             text(canvas, if (haveHeading) "%03d°".format(Locale.US, heading.toInt())
-                 else "–°", 233f, 415f, 20f, purple)
+                 else "–°", 233f, 400f, 20f, purple)
             // Red triangle is a fixed 12-o'clock orientation indicator.
             val triangle = Path().apply {
                 moveTo(233f, 8f); lineTo(225f, 25f); lineTo(241f, 25f); close()
