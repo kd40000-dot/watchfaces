@@ -28,6 +28,14 @@ jobs:
         run: |
           ls -lh watchface/build/outputs/apk/debug/*.apk
           unzip -t watchface/build/outputs/apk/debug/*.apk | tail -2
+      - name: Build sensor-driven companion face
+        run: gradle --no-daemon :legacy:assembleDebug
+      - name: Upload sensor-driven APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: Arcs-Dracula-Live-Compass-WearOS5-experimental
+          path: legacy/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
