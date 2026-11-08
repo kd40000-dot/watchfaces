@@ -15,4 +15,5 @@
   <string name="editor_permission_prompt">Allow complication access when prompted.</string>
   <string name="editor_permission_denied">Permission denied. Allow complication data access in watch settings.</string>
   <string name="editor_cancelled">No data source selected.</string>
+  <string name="editor_selected">Selected. Tap Done to apply.</string>
 </resources>
