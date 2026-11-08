@@ -17,6 +17,7 @@ import android.hardware.SensorEventListener
 import android.hardware.SensorManager
 import android.os.BatteryManager
 import android.text.TextUtils
+import android.text.TextPaint
 import android.text.format.DateFormat
 import android.view.SurfaceHolder
 import androidx.wear.watchface.CanvasComplicationFactory
@@ -352,7 +353,7 @@ class ArcsCompassService : WatchFaceService() {
                     p.textScaleX = (maxTextWidth / nominalWidth).coerceIn(0.72f, 1f)
                 }
                 val visibleValue = TextUtils.ellipsize(
-                    value, p, maxTextWidth, TextUtils.TruncateAt.END
+                    value, TextPaint(p), maxTextWidth, TextUtils.TruncateAt.END
                 ).toString()
                 val valueWidth = p.measureText(visibleValue)
                 val total = iconSize + gap + valueWidth
@@ -590,7 +591,7 @@ class ArcsCompassService : WatchFaceService() {
                         p.textScaleX = (maxWidth/rawWidth).coerceIn(0.72f, 1f)
                     }
                     val visibleValue = TextUtils.ellipsize(
-                        value, p, maxWidth, TextUtils.TruncateAt.END
+                        value, TextPaint(p), maxWidth, TextUtils.TruncateAt.END
                     ).toString()
                     canvas.drawText(visibleValue, x, centerBadgeY + 38f, p)
                 }
