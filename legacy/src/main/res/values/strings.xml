@@ -12,4 +12,7 @@
   <string name="editor_selecting">Opening provider picker…</string>
   <string name="editor_failed">Editor error: %1$s</string>
   <string name="editor_done">Done</string>
+  <string name="editor_permission_prompt">Allow complication access when prompted.</string>
+  <string name="editor_permission_denied">Permission denied. Allow complication data access in watch settings.</string>
+  <string name="editor_cancelled">No data source selected.</string>
 </resources>
