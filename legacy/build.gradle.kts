@@ -25,8 +25,8 @@ android {
         applicationId = "dev.kd40000.arcscompasslive"
         minSdk = 30
         targetSdk = 33
-        versionCode = 5
-        versionName = "0.4.0"
+        versionCode = 6
+        versionName = "0.4.1"
     }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
@@ -36,6 +36,8 @@ android {
 }
 dependencies {
     implementation("androidx.wear.watchface:watchface:1.2.1")
+    implementation("androidx.wear.watchface:watchface-editor:1.2.1")
+    implementation("androidx.activity:activity-ktx:1.7.0")
     implementation("androidx.wear.watchface:watchface-complications-rendering:1.2.1")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
 }
