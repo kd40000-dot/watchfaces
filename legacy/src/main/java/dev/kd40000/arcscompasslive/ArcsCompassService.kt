@@ -179,8 +179,8 @@ class ArcsCompassService : WatchFaceService() {
         // Three separated radial bands: compass outside, arcs in the middle,
         // larger complication labels inside. Distances use 466x466 source units.
         private val compassLabelRadius = 212f
-        private val progressArcRadius = 183f
-        private val outerLabelRadius = 149f
+        private val progressArcRadius = 188f
+        private val outerLabelRadius = 157f
         private val centerBadgeY = 285f
         private val centerBadgeRadius = 46f
         // Avoid decoding the same provider icons once per second.
@@ -309,8 +309,8 @@ class ArcsCompassService : WatchFaceService() {
         private fun drawOuterComplicationLabels(canvas: Canvas) {
             // upper-left, upper-right, lower-right, lower-left
             val data = arrayOf(
-                Triple(3, 310f, orange),
-                Triple(4, 50f, green),
+                Triple(3, 315f, orange),
+                Triple(4, 45f, green),
                 Triple(6, 137f, cyan),
                 Triple(5, 223f, green)
             )
