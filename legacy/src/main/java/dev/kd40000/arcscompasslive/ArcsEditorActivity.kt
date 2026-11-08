@@ -73,7 +73,14 @@ class ArcsEditorActivity : ComponentActivity() {
 
         val done = Button(this).apply {
             text = getString(R.string.editor_done)
-            setOnClickListener { finish() }
+            setOnClickListener {
+                // OnWatchEditorSession registers its own lifecycle observer.
+                // Finishing the Activity triggers its single authoritative close,
+                // which broadcasts the selected providers to the watchface host.
+                editorSession?.commitChangesOnClose = true
+                android.util.Log.i("ArcsEditor", "Done pressed; committing editor session")
+                finish()
+            }
         }
         column.addView(done, LinearLayout.LayoutParams(-1, dp(52)))
         setContentView(root)
@@ -85,6 +92,9 @@ class ArcsEditorActivity : ComponentActivity() {
                 EditorSession.createOnWatchEditorSession(this@ArcsEditorActivity)
             }.onSuccess { session ->
                 editorSession = session
+                // Changes must be committed by AndroidX when the editor ends.
+                session.commitChangesOnClose = true
+                android.util.Log.i("ArcsEditor", "EditorSession created; watchface=${session.watchFaceComponentName}")
                 showEditor()
             }.onFailure { error ->
                 status.text = getString(
@@ -134,10 +144,13 @@ class ArcsEditorActivity : ComponentActivity() {
                 val grantedNow =
                     checkSelfPermission(complicationPermission) == PackageManager.PERMISSION_GRANTED
                 status.text = when {
-                    result != null -> getString(R.string.editor_prompt)
+                    result != null -> getString(R.string.editor_selected)
                     !grantedNow -> getString(R.string.editor_permission_denied)
                     else -> getString(R.string.editor_cancelled)
                 }
+                // Keep the Activity and EditorSession alive until Done is pressed.
+                // The chooser only changes the *pending* editor selection; closing
+                // the session is what commits it to the system watchface service.
                 if (result == null) {
                     Toast.makeText(this@ArcsEditorActivity, status.text,
                         Toast.LENGTH_LONG).show()
@@ -159,8 +172,24 @@ class ArcsEditorActivity : ComponentActivity() {
 
     private fun dp(value: Int): Int = (value * resources.displayMetrics.density + 0.5f).toInt()
 
+    override fun onStart() {
+        super.onStart()
+        android.util.Log.i("ArcsEditor", "onStart selecting=$selecting")
+    }
+
+    override fun onStop() {
+        android.util.Log.i("ArcsEditor",
+            "onStop selecting=$selecting finishing=$isFinishing")
+        super.onStop()
+    }
+
     override fun onDestroy() {
-        editorSession?.close()
+        android.util.Log.i("ArcsEditor",
+            "onDestroy finishing=$isFinishing selecting=$selecting; AndroidX owns session close")
+        // DO NOT call editorSession.close() here. AndroidX
+        // createOnWatchEditorSession already installed its own onDestroy
+        // lifecycle observer. Double-closing could race the EditorState
+        // broadcast and cause provider changes to be lost.
         editorSession = null
         super.onDestroy()
     }
