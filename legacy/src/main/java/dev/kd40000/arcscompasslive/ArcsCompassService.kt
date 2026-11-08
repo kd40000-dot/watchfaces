@@ -101,12 +101,12 @@ class ArcsCompassService : WatchFaceService() {
             ComplicationType.SMALL_IMAGE
         )
         val boxes = listOf(
-            RectF(109f/466, 261f/466, 221f/466, 355f/466),
-            RectF(245f/466, 261f/466, 357f/466, 355f/466),
-            RectF(54f/466, 66f/466, 173f/466, 103f/466),
-            RectF(294f/466, 66f/466, 413f/466, 103f/466),
-            RectF(45f/466, 347f/466, 162f/466, 385f/466),
-            RectF(304f/466, 347f/466, 421f/466, 385f/466)
+            RectF(118f/466, 239f/466, 212f/466, 331f/466),
+            RectF(254f/466, 239f/466, 348f/466, 331f/466),
+            RectF(76f/466, 96f/466, 166f/466, 146f/466),
+            RectF(300f/466, 96f/466, 390f/466, 146f/466),
+            RectF(72f/466, 339f/466, 170f/466, 389f/466),
+            RectF(296f/466, 339f/466, 394f/466, 389f/466)
         )
         val systemIds = listOf(
             // Six distinct safe system defaults; users can choose their
