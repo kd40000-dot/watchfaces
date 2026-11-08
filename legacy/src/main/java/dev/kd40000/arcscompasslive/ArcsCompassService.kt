@@ -648,9 +648,15 @@ class ArcsCompassService : WatchFaceService() {
         override fun renderHighlightLayer(
             canvas: Canvas, bounds: Rect, zonedDateTime: ZonedDateTime
         ) {
-            canvas.drawColor(renderParameters.highlightLayer!!.backgroundTint)
+            // Picker, chooser and headless preview render paths can request
+            // a highlight-layer callback without a highlight configuration.
+            // Never crash the active engine in that case.
+            val layer = renderParameters.highlightLayer ?: return
+            canvas.drawColor(layer.backgroundTint)
             for (slot in slots.complicationSlots.values) {
-                slot.renderHighlightLayer(canvas,zonedDateTime,renderParameters)
+                if (slot.enabled) {
+                    slot.renderHighlightLayer(canvas, zonedDateTime, renderParameters)
+                }
             }
         }
 
