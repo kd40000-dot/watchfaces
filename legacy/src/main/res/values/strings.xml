@@ -6,4 +6,10 @@
   <string name="slot_4">Upper right complication</string>
   <string name="slot_5">Lower left complication</string>
   <string name="slot_6">Lower right complication</string>
+  <string name="editor_title">Arcs Complications</string>
+  <string name="editor_loading">Starting editor…</string>
+  <string name="editor_prompt">Choose a complication to edit</string>
+  <string name="editor_selecting">Opening provider picker…</string>
+  <string name="editor_failed">Editor error: %1$s</string>
+  <string name="editor_done">Done</string>
 </resources>
