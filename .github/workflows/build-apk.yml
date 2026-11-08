@@ -39,6 +39,16 @@ jobs:
           test -s legacy/src/main/res/drawable-nodpi/preview_bitmap.png
       - name: Build sensor-driven companion face
         run: gradle --no-daemon :legacy:assembleDebug
+      - name: Check complication chooser manifest
+        run: |
+          APK=legacy/build/outputs/apk/debug/legacy-debug.apk
+          AAPT="$(find "$ANDROID_HOME/build-tools" -name aapt -type f | sort -V | tail -1)"
+          "$AAPT" dump permissions "$APK" | tee /tmp/permissions.txt
+          grep -q 'com.google.android.wearable.permission.RECEIVE_COMPLICATION_DATA' /tmp/permissions.txt
+          "$AAPT" dump xmltree "$APK" AndroidManifest.xml > /tmp/manifest.txt
+          grep -q 'ComplicationHelperActivity' /tmp/manifest.txt
+          grep -q 'ArcsEditorActivity' /tmp/manifest.txt
+          echo "Editor launcher, helper and complication permission present."
       - name: Upload sensor-driven APK
         uses: actions/upload-artifact@v4
         with:
