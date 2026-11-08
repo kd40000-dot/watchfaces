@@ -32,6 +32,11 @@ jobs:
         run: |
           ls -lh watchface/build/outputs/apk/debug/*.apk
           unzip -t watchface/build/outputs/apk/debug/*.apk | tail -2
+      - name: Generate bitmap preview for OEM watch face picker
+        run: |
+          python3 -m pip install --quiet Pillow
+          python3 ci/make_picker_preview.py
+          test -s legacy/src/main/res/drawable-nodpi/preview_bitmap.png
       - name: Build sensor-driven companion face
         run: gradle --no-daemon :legacy:assembleDebug
       - name: Upload sensor-driven APK
