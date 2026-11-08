@@ -25,8 +25,8 @@ android {
         applicationId = "dev.kd40000.arcscompasslive"
         minSdk = 30
         targetSdk = 33
-        versionCode = 8
-        versionName = "0.4.3"
+        versionCode = 9
+        versionName = "0.4.4"
     }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
