@@ -66,7 +66,7 @@ center("6954",165,323,24,'#F8F8F2',True)
 center("76",301,323,24,'#F8F8F2',True)
 
 # 12 o'clock pointer, heading, and representative ring readouts
-d.polygon([(p(233),p(7)),(p(225),p(25)),(p(241),p(25))],fill="#FF5555")
+d.polygon([(p(233),p(1)),(p(223),p(10)),(p(243),p(10))],fill="#FF5555")
 center("000°",233,403,25,'#BD93F9',True)
 
 def tangent_label(text,bearing,color):
