@@ -649,7 +649,7 @@ class ArcsCompassService : WatchFaceService() {
                  else "–°", 233f, 403f, 25f, purple)
             // Red triangle is a fixed 12-o'clock orientation indicator.
             val triangle = Path().apply {
-                moveTo(233f, 8f); lineTo(225f, 25f); lineTo(241f, 25f); close()
+                moveTo(233f, 1f); lineTo(223f, 10f); lineTo(243f, 10f); close()
             }
             p.color = red
             canvas.drawPath(triangle,p)
