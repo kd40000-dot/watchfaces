@@ -16,6 +16,7 @@ import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
 import android.os.BatteryManager
+import android.text.TextUtils
 import android.text.format.DateFormat
 import android.view.SurfaceHolder
 import androidx.wear.watchface.CanvasComplicationFactory
@@ -175,6 +176,13 @@ class ArcsCompassService : WatchFaceService() {
         private val orange = Color.rgb(255, 184, 108)
         private val cyan = Color.rgb(139, 233, 253)
         private val red = Color.rgb(255, 85, 85)
+        // Three separated radial bands: compass outside, arcs in the middle,
+        // larger complication labels inside. Distances use 466x466 source units.
+        private val compassLabelRadius = 212f
+        private val progressArcRadius = 183f
+        private val outerLabelRadius = 149f
+        private val centerBadgeY = 285f
+        private val centerBadgeRadius = 46f
         // Avoid decoding the same provider icons once per second.
         private val outerIconCache = mutableMapOf<Int, Pair<Icon, Drawable>>()
         private val sensorManager = context.getSystemService(Context.SENSOR_SERVICE) as SensorManager
@@ -301,8 +309,8 @@ class ArcsCompassService : WatchFaceService() {
         private fun drawOuterComplicationLabels(canvas: Canvas) {
             // upper-left, upper-right, lower-right, lower-left
             val data = arrayOf(
-                Triple(3, 317f, orange),
-                Triple(4, 43f, green),
+                Triple(3, 310f, orange),
+                Triple(4, 50f, green),
                 Triple(6, 137f, cyan),
                 Triple(5, 223f, green)
             )
@@ -314,7 +322,7 @@ class ArcsCompassService : WatchFaceService() {
                 val value = outerValue(id, complication) ?: continue
 
                 val theta = Math.toRadians(bearing.toDouble())
-                val radius = 180f
+                val radius = outerLabelRadius
                 val x = 233f + sin(theta).toFloat() * radius
                 val y = 233f - cos(theta).toFloat() * radius
                 val tangentRotation = if (bearing > 90f && bearing < 270f) {
@@ -332,25 +340,33 @@ class ArcsCompassService : WatchFaceService() {
                 p.style = Paint.Style.FILL
                 p.color = fg
                 p.typeface = Typeface.create("sans-serif", Typeface.BOLD)
-                // Uniform nominal size, scaled by measured width only when
-                // required. Same bearing, radius and arc side as v0.3.0.
-                p.textSize = 20f
+                // Larger than v0.4.4, but enforce a hard 94-unit limit so
+                // long data-source text never runs into arcs or other elements.
+                p.textSize = 24f
                 p.textAlign = Paint.Align.LEFT
-                val iconSize = 21f
-                val gap = 6f
-                val labelMax = 100f
-                val textWidth = p.measureText(value)
-                if (textWidth > labelMax - iconSize - gap) {
-                    p.textScaleX = ((labelMax - iconSize - gap) / textWidth)
-                        .coerceIn(0.62f, 1f)
+                val iconSize = 26f
+                val gap = 8f
+                val maxTextWidth = 60f
+                val nominalWidth = p.measureText(value)
+                if (nominalWidth > maxTextWidth) {
+                    p.textScaleX = (maxTextWidth / nominalWidth).coerceIn(0.72f, 1f)
                 }
-                val valueWidth = p.measureText(value)
+                val visibleValue = TextUtils.ellipsize(
+                    value, p, maxTextWidth, TextUtils.TruncateAt.END
+                ).toString()
+                val valueWidth = p.measureText(visibleValue)
                 val total = iconSize + gap + valueWidth
                 val iconX = -total / 2f
                 val valueX = iconX + iconSize + gap
-                drawOuterIcon(canvas, id, complication, iconX, -iconSize / 2f, tint)
+                // Fallback vector and provider icons share a 21-unit canvas,
+                // so scale the drawing instead of enlarging only bitmaps.
+                val iconSaved = canvas.save()
+                canvas.translate(iconX, -iconSize / 2f)
+                canvas.scale(iconSize / 21f, iconSize / 21f)
+                drawOuterIcon(canvas, id, complication, 0f, 0f, tint)
+                canvas.restoreToCount(iconSaved)
                 p.color = fg
-                canvas.drawText(value, valueX, 7f, p)
+                canvas.drawText(visibleValue, valueX, 8f, p)
                 canvas.restoreToCount(save)
             }
         }
@@ -464,12 +480,13 @@ class ArcsCompassService : WatchFaceService() {
         private fun circles(canvas: Canvas) {
             p.style = Paint.Style.FILL
             p.color = Color.rgb(31, 32, 42) // dark, less prominent than the arc colors
-            canvas.drawCircle(165f, 309f, 52f, p)
-            canvas.drawCircle(301f, 309f, 52f, p)
+            canvas.drawCircle(165f, centerBadgeY, centerBadgeRadius, p)
+            canvas.drawCircle(301f, centerBadgeY, centerBadgeRadius, p)
         }
 
         private fun drawArcs(canvas: Canvas) {
-            val rect = RectF(39f, 39f, 427f, 427f)
+            val rect = RectF(233f - progressArcRadius, 233f - progressArcRadius,
+                233f + progressArcRadius, 233f + progressArcRadius)
             val ranges = arrayOf(
                 floatArrayOf(285f, 352f), floatArrayOf(8f, 75f),
                 floatArrayOf(105f, 172f), floatArrayOf(188f, 255f)
@@ -551,8 +568,8 @@ class ArcsCompassService : WatchFaceService() {
                 val icon = outerIcon(data)
                 // Big, brightly-colored provider icon as on stock Arcs.
                 // Short value remains readable, but subordinate to the icon.
-                val iconSize = if (value == null) 46f else 39f
-                val iconY = if (value == null) 309f-iconSize/2f else 280f
+                val iconSize = if (value == null) 54f else 47f
+                val iconY = if (value == null) centerBadgeY - iconSize/2f else centerBadgeY - 39f
                 val save = canvas.save()
                 canvas.translate(x - iconSize / 2f,iconY)
                 canvas.scale(iconSize/21f,iconSize/21f)
@@ -566,11 +583,16 @@ class ArcsCompassService : WatchFaceService() {
                     p.textAlign = Paint.Align.CENTER
                     p.typeface = Typeface.create("sans-serif",Typeface.BOLD)
                     p.color = fg
-                    p.textSize = 19f
-                    val maxWidth = 90f
+                    p.textSize = 24f
+                    val maxWidth = 84f
                     val rawWidth = p.measureText(value)
-                    if (rawWidth > maxWidth) p.textScaleX = (maxWidth/rawWidth).coerceIn(0.62f,1f)
-                    canvas.drawText(value,x,337f,p)
+                    if (rawWidth > maxWidth) {
+                        p.textScaleX = (maxWidth/rawWidth).coerceIn(0.72f, 1f)
+                    }
+                    val visibleValue = TextUtils.ellipsize(
+                        value, p, maxWidth, TextUtils.TruncateAt.END
+                    ).toString()
+                    canvas.drawText(visibleValue, x, centerBadgeY + 38f, p)
                 }
             }
         }
@@ -617,13 +639,13 @@ class ArcsCompassService : WatchFaceService() {
             )
             for ((bearing, label, color) in labels) {
                 val angle = Math.toRadians((bearing - offset - 90).toDouble())
-                val x = 233f + cos(angle).toFloat() * 207f
-                val y = 233f + sin(angle).toFloat() * 205f
-                text(canvas, label, x, y + 9f, 20f, color, Typeface.BOLD)
+                val x = 233f + cos(angle).toFloat() * compassLabelRadius
+                val y = 233f + sin(angle).toFloat() * compassLabelRadius
+                text(canvas, label, x, y + 9f, 22f, color, Typeface.BOLD)
             }
             // Heading readout on the lower open space, live and suppressed if unavailable.
             text(canvas, if (haveHeading) "%03d°".format(Locale.US, heading.toInt())
-                 else "–°", 233f, 400f, 20f, purple)
+                 else "–°", 233f, 403f, 25f, purple)
             // Red triangle is a fixed 12-o'clock orientation indicator.
             val triangle = Path().apply {
                 moveTo(233f, 8f); lineTo(225f, 25f); lineTo(241f, 25f); close()
