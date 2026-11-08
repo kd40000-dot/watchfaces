@@ -1,6 +1,7 @@
 package dev.kd40000.arcscompasslive
 
 import android.graphics.Color
+import android.content.pm.PackageManager
 import android.os.Bundle
 import android.view.Gravity
 import android.view.View
@@ -9,6 +10,7 @@ import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.lifecycle.lifecycleScope
 import androidx.wear.watchface.editor.EditorSession
@@ -116,15 +118,38 @@ class ArcsEditorActivity : ComponentActivity() {
         val session = editorSession ?: return
         if (selecting) return
         selecting = true
-        status.text = getString(R.string.editor_selecting)
+        val complicationPermission =
+            "com.google.android.wearable.permission.RECEIVE_COMPLICATION_DATA"
+        val permissionGranted =
+            checkSelfPermission(complicationPermission) == PackageManager.PERMISSION_GRANTED
+        status.text = if (permissionGranted) getString(R.string.editor_selecting)
+            else getString(R.string.editor_permission_prompt)
+        android.util.Log.i("ArcsEditor",
+            "Launching chooser for slot $slotId; complication permission=$permissionGranted")
         lifecycleScope.launch {
             try {
-                session.openComplicationDataSourceChooser(slotId)
-                status.text = getString(R.string.editor_prompt)
+                // AndroidX opens ComplicationHelperActivity, which requests
+                // RECEIVE_COMPLICATION_DATA before launching the system picker.
+                val result = session.openComplicationDataSourceChooser(slotId)
+                val grantedNow =
+                    checkSelfPermission(complicationPermission) == PackageManager.PERMISSION_GRANTED
+                status.text = when {
+                    result != null -> getString(R.string.editor_prompt)
+                    !grantedNow -> getString(R.string.editor_permission_denied)
+                    else -> getString(R.string.editor_cancelled)
+                }
+                if (result == null) {
+                    Toast.makeText(this@ArcsEditorActivity, status.text,
+                        Toast.LENGTH_LONG).show()
+                }
+                android.util.Log.i("ArcsEditor",
+                    "Chooser returned for slot $slotId; chosen=${result != null}; permission=$grantedNow")
             } catch (error: Exception) {
                 status.text = getString(
                     R.string.editor_failed, error.message ?: error.javaClass.simpleName
                 )
+                Toast.makeText(this@ArcsEditorActivity, status.text,
+                    Toast.LENGTH_LONG).show()
                 android.util.Log.e("ArcsEditor", "Chooser failed for slot $slotId", error)
             } finally {
                 selecting = false
