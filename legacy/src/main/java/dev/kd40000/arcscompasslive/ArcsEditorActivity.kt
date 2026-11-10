@@ -15,6 +15,7 @@ import androidx.activity.ComponentActivity
 import androidx.lifecycle.lifecycleScope
 import androidx.wear.watchface.editor.EditorSession
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.collect
 
 /**
  * On-watch editor for AndroidX legacy Watch Face Service.
@@ -96,6 +97,21 @@ class ArcsEditorActivity : ComponentActivity() {
                 session.commitChangesOnClose = true
                 android.util.Log.i("ArcsEditor", "EditorSession created; watchface=${session.watchFaceComponentName}")
                 showEditor()
+                // Recover artwork for providers chosen in previous versions too,
+                // including data sources whose live SHORT_TEXT contains no image.
+                lifecycleScope.launch {
+                    session.complicationsDataSourceInfo.collect { providers ->
+                        for ((id, info) in providers) {
+                            if (id in 1..6) {
+                                if (info != null) {
+                                    ProviderIconStore.save(this@ArcsEditorActivity,id,info)
+                                } else {
+                                    ProviderIconStore.clear(this@ArcsEditorActivity,id)
+                                }
+                            }
+                        }
+                    }
+                }
             }.onFailure { error ->
                 status.text = getString(
                     R.string.editor_failed, error.message ?: error.javaClass.simpleName
@@ -141,6 +157,16 @@ class ArcsEditorActivity : ComponentActivity() {
                 // AndroidX opens ComplicationHelperActivity, which requests
                 // RECEIVE_COMPLICATION_DATA before launching the system picker.
                 val result = session.openComplicationDataSourceChooser(slotId)
+                // A complication can send only text/numbers at runtime.
+                // Preserve the actual data source picker icon separately.
+                if (result != null) {
+                    val selectedInfo = result.complicationDataSourceInfo
+                    if (selectedInfo == null) {
+                        ProviderIconStore.clear(this@ArcsEditorActivity,slotId)
+                    } else {
+                        ProviderIconStore.save(this@ArcsEditorActivity,slotId,selectedInfo)
+                    }
+                }
                 val grantedNow =
                     checkSelfPermission(complicationPermission) == PackageManager.PERMISSION_GRANTED
                 status.text = when {
