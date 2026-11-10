@@ -3,9 +3,15 @@ package dev.kd40000.arcscompasslive
 
 import android.content.Context
 import android.graphics.Canvas
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.graphics.PorterDuff
+import android.graphics.PorterDuffColorFilter
 import android.graphics.Color
 import android.graphics.drawable.Drawable
 import android.graphics.drawable.Icon
+import android.content.ComponentName
+import android.util.Log
 import android.graphics.Paint
 import android.graphics.Path
 import android.graphics.Rect
@@ -184,8 +190,14 @@ class ArcsCompassService : WatchFaceService() {
         private val outerLabelRadius = 157f
         private val centerBadgeY = 285f
         private val centerBadgeRadius = 46f
-        // Avoid decoding the same provider icons once per second.
+        // Provider-supplied icon and chooser metadata cache. Never hold
+        // generic footsteps/battery icons based only on slot position.
         private val outerIconCache = mutableMapOf<Int, Pair<Icon, Drawable>>()
+        private val providerServiceIconCache = mutableMapOf<String, Drawable?>()
+        private val selectedIconCache = mutableMapOf<Int, Pair<String, Bitmap?>>()
+        private val iconPrefs = context.getSharedPreferences(
+            "selected_complication_provider_icons", Context.MODE_PRIVATE
+        )
         private val sensorManager = context.getSystemService(Context.SENSOR_SERVICE) as SensorManager
         private val rotation = sensorManager.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR)
             ?: sensorManager.getDefaultSensor(Sensor.TYPE_GEOMAGNETIC_ROTATION_VECTOR)
@@ -320,7 +332,10 @@ class ArcsCompassService : WatchFaceService() {
                 if (!slot.enabled) continue
 
                 val complication = slot.complicationData.value
-                val value = outerValue(id, complication) ?: continue
+                val value = outerValue(id, complication) ?: when(complication) {
+                    is MonochromaticImageComplicationData, is SmallImageComplicationData -> ""
+                    else -> continue
+                }
 
                 val theta = Math.toRadians(bearing.toDouble())
                 val radius = outerLabelRadius
@@ -394,12 +409,67 @@ class ArcsCompassService : WatchFaceService() {
             return null
         }
 
+        // The selected data source controls the icon. The provider can send
+        // either a monochrome image or a full-color small image along with
+        // SHORT_TEXT, RANGED_VALUE or GOAL_PROGRESS.
         private fun outerIcon(data: ComplicationData?): Icon? = when (data) {
-            is ShortTextComplicationData -> data.monochromaticImage?.image
-            is RangedValueComplicationData -> data.monochromaticImage?.image
-            is GoalProgressComplicationData -> data.monochromaticImage?.image
+            is ShortTextComplicationData ->
+                data.monochromaticImage?.image ?: data.smallImage?.image
+            is RangedValueComplicationData ->
+                data.monochromaticImage?.image ?: data.smallImage?.image
+            is GoalProgressComplicationData ->
+                data.monochromaticImage?.image ?: data.smallImage?.image
             is MonochromaticImageComplicationData -> data.monochromaticImage.image
             is SmallImageComplicationData -> data.smallImage.image
+            else -> null
+        }
+
+        private fun chosenProviderIcon(id: Int, data: ComplicationData?): Bitmap? {
+            val revision = iconPrefs.getLong("revision_$id", -1L)
+            val source = data?.dataSource
+            val key = "$revision:${source?.flattenToString() ?: ""}"
+            val cached = selectedIconCache[id]
+            if (cached?.first == key) return cached.second
+            val bitmap = ProviderIconStore.read(context, id, source)
+            selectedIconCache[id] = key to bitmap
+            return bitmap
+        }
+
+        private fun serviceIcon(source: ComponentName?): Drawable? {
+            if (source == null) return null
+            val key = source.flattenToString()
+            if (providerServiceIconCache.containsKey(key)) return providerServiceIconCache[key]
+            val drawable = runCatching {
+                val pm = context.packageManager
+                pm.getServiceInfo(source, 0).loadIcon(pm)?.mutate()
+                    ?: pm.getApplicationIcon(source.packageName)?.mutate()
+            }.getOrElse {
+                Log.d("ArcsIcons","No service icon for $key: ${it.javaClass.simpleName}")
+                null
+            }
+            providerServiceIconCache[key] = drawable
+            return drawable
+        }
+
+        private fun drawIconDrawable(
+            canvas: Canvas, drawable: Drawable,
+            left: Float, top: Float, color: Int
+        ) {
+            val save = canvas.save()
+            canvas.translate(left, top)
+            drawable.setTint(color)
+            drawable.setBounds(0, 0, 21, 21)
+            drawable.draw(canvas)
+            canvas.restoreToCount(save)
+        }
+
+        private fun fallbackTitle(data: ComplicationData?): String? = when(data) {
+            is ShortTextComplicationData ->
+                data.title?.getTextAt(context.resources, Instant.now())?.toString()
+            is RangedValueComplicationData ->
+                data.title?.getTextAt(context.resources, Instant.now())?.toString()
+            is GoalProgressComplicationData ->
+                data.title?.getTextAt(context.resources, Instant.now())?.toString()
             else -> null
         }
 
@@ -407,73 +477,59 @@ class ArcsCompassService : WatchFaceService() {
             canvas: Canvas, id: Int, data: ComplicationData?,
             left: Float, top: Float, color: Int
         ) {
-            val icon = outerIcon(data)
-            if (icon != null) {
+            // 1. Live provider artwork wins, including smallImage if monochrome
+            //    wasn't supplied.
+            val image = outerIcon(data)
+            if (image != null) {
                 val previous = outerIconCache[id]
-                val drawable = if (previous?.first == icon) previous.second
-                    else runCatching { icon.loadDrawable(context)?.mutate() }.getOrNull()?.also {
-                        outerIconCache[id] = icon to it
+                val drawable = if (previous?.first == image) previous.second
+                    else runCatching { image.loadDrawable(context)?.mutate() }.getOrNull()?.also {
+                        outerIconCache[id] = image to it
                     }
                 if (drawable != null) {
-                    val save = canvas.save()
-                    canvas.translate(left, top)
-                    drawable.setTint(color)
-                    drawable.setBounds(0, 0, 21, 21)
-                    drawable.draw(canvas)
-                    canvas.restoreToCount(save)
+                    drawIconDrawable(canvas,drawable,left,top,color)
                     return
                 }
             }
-            // Fallback icons are matched to the NEW six distinct default
-            // data sources. If a custom provider supplies a real icon above,
-            // that icon takes precedence.
+            // 2. Exact icon captured from the selected provider's chooser.
+            //    Stored per slot; changes are observed through revision ids.
+            val chosen = chosenProviderIcon(id,data)
+            if (chosen != null && !chosen.isRecycled) {
+                p.reset()
+                p.isAntiAlias = true
+                p.color = Color.WHITE
+                p.colorFilter = PorterDuffColorFilter(color,PorterDuff.Mode.SRC_IN)
+                canvas.drawBitmap(chosen,null,RectF(left,top,left+21f,top+21f),p)
+                p.colorFilter = null
+                return
+            }
+            // 3. Service icon for selections made outside our editor.
+            serviceIcon(data?.dataSource)?.let {
+                drawIconDrawable(canvas,it,left,top,color)
+                return
+            }
+            // 4. No icon supplied anywhere. Show a neutral data-source glyph,
+            //    or the first letter of its actual title. Never show the old
+            //    fixed shoes/battery/calendar icon based on the *slot number*.
+            p.reset()
+            p.isAntiAlias = true
             p.style = Paint.Style.STROKE
             p.strokeWidth = 2.3f
             p.strokeCap = Paint.Cap.ROUND
-            p.strokeJoin = Paint.Join.ROUND
             p.color = color
-            when (id) {
-                1 -> { // Steps / walking
-                    p.style = Paint.Style.FILL
-                    canvas.drawOval(left + 2f, top + 10f, left + 9f, top + 19f, p)
-                    canvas.drawOval(left + 11f, top + 2f, left + 18f, top + 11f, p)
-                }
-                2 -> { // Watch battery
-                    canvas.drawRoundRect(left + 1f, top + 3f,
-                        left + 17f, top + 18f, 3f, 3f, p)
-                    p.style = Paint.Style.FILL
-                    canvas.drawRect(left + 18f, top + 8f,
-                        left + 21f, top + 13f, p)
-                }
-                3 -> { // Notifications, bell
-                    canvas.drawArc(left + 4f, top + 3f, left + 17f,
-                        top + 17f, 185f, 170f, false, p)
-                    canvas.drawLine(left + 3f, top + 17f, left + 18f, top + 17f,p)
-                    p.style = Paint.Style.FILL
-                    canvas.drawCircle(left + 10.5f,top + 19f,1.3f,p)
-                }
-                4 -> { // Sunrise / sunset
-                    canvas.drawArc(left + 4f, top + 5f, left + 17f,
-                        top + 18f, 180f, 180f, false, p)
-                    canvas.drawLine(left + 2f,top + 18f,left + 19f,top + 18f,p)
-                    canvas.drawLine(left + 10.5f,top + 1f,left + 10.5f,top + 5f,p)
-                    canvas.drawLine(left + 2f,top + 6f,left + 5f,top + 9f,p)
-                    canvas.drawLine(left + 19f,top + 6f,left + 16f,top + 9f,p)
-                }
-                5 -> { // World clock
-                    canvas.drawCircle(left + 10.5f,top + 10.5f,8f,p)
-                    canvas.drawLine(left + 10.5f,top + 10.5f,
-                        left + 10.5f,top + 5f,p)
-                    canvas.drawLine(left + 10.5f,top + 10.5f,
-                        left + 15f,top + 13f,p)
-                }
-                6 -> { // Date
-                    canvas.drawRoundRect(left + 2f, top + 3f,
-                        left + 19f, top + 19f, 2f, 2f, p)
-                    canvas.drawLine(left + 3f,top + 8f,left + 18f,top + 8f,p)
-                    canvas.drawLine(left + 7f,top + 1f,left + 7f,top + 5f,p)
-                    canvas.drawLine(left + 14f,top + 1f,left + 14f,top + 5f,p)
-                }
+            val title = fallbackTitle(data)?.trim()
+            val initial = title?.firstOrNull { it.isLetter() }
+            if (initial != null) {
+                p.style = Paint.Style.FILL
+                p.textAlign = Paint.Align.CENTER
+                p.typeface = Typeface.create("sans-serif",Typeface.BOLD)
+                p.textSize = 19f
+                canvas.drawText(initial.uppercaseChar().toString(),left+10.5f,top+18f,p)
+            } else {
+                canvas.drawRoundRect(left+2f,top+2f,left+19f,top+19f,4f,4f,p)
+                p.style = Paint.Style.FILL
+                canvas.drawCircle(left+7f,top+10.5f,1.5f,p)
+                canvas.drawCircle(left+14f,top+10.5f,1.5f,p)
             }
             p.style = Paint.Style.FILL
         }
@@ -566,8 +622,9 @@ class ArcsCompassService : WatchFaceService() {
                 if (!slot.enabled) continue
                 val data = slot.complicationData.value
                 val value = centerValue(data)
-                val icon = outerIcon(data)
-                // Big, brightly-colored provider icon as on stock Arcs.
+                // Big, brightly-colored data-source icon as on stock Arcs.
+                // The icon is resolved dynamically from the provider payload,
+                // selected provider metadata or source service, never slot ID.
                 // Short value remains readable, but subordinate to the icon.
                 val iconSize = if (value == null) 54f else 47f
                 val iconY = if (value == null) centerBadgeY - iconSize/2f else centerBadgeY - 39f
