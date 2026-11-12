@@ -227,12 +227,13 @@ class ArcsCompassService : WatchFaceService() {
             "selected_complication_provider_icons", Context.MODE_PRIVATE
         )
         private val sensorManager = context.getSystemService(Context.SENSOR_SERVICE) as SensorManager
-        // Prefer the low-power fused orientation source: it avoids the gyro.
-        // The traditional rotation vector stays as fallback for watches
-        // without a geomagnetic rotation-vector sensor.
+        // The OnePlus Watch 2 reliably delivered TYPE_ROTATION_VECTOR
+        // in v0.4.6. On this firmware the geomagnetic fusion source can be
+        // advertised but not deliver usable updates to the legacy face.
+        // Prefer the confirmed working path; fall back if it is absent.
         private val rotation =
-            sensorManager.getDefaultSensor(Sensor.TYPE_GEOMAGNETIC_ROTATION_VECTOR)
-                ?: sensorManager.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR)
+            sensorManager.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR)
+                ?: sensorManager.getDefaultSensor(Sensor.TYPE_GEOMAGNETIC_ROTATION_VECTOR)
         private val accel = if(rotation == null) sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER) else null
         private val magnet = if(rotation == null) sensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD) else null
         private val gravityValues = FloatArray(3)
@@ -246,8 +247,9 @@ class ArcsCompassService : WatchFaceService() {
         private var heading = 0f
         private var haveHeading = false
         private var lastCompassRedrawAtMs = 0L
-        // Compass redrawing is capped at two frames/second while worn/visible.
-        private val minCompassRedrawIntervalMs = 500L
+        // Cap sensor-driven paints without starving the live compass.
+        // Sensor events can be more frequent; actual paints max ~4/second.
+        private val minCompassRedrawIntervalMs = 250L
 
         init {
             scope.launch {
@@ -265,13 +267,13 @@ class ArcsCompassService : WatchFaceService() {
             haveHeading = false
             lastCompassRedrawAtMs = 0L
             listening = if (rotation != null) {
-                sensorManager.registerListener(this, rotation, SensorManager.SENSOR_DELAY_NORMAL)
+                sensorManager.registerListener(this, rotation, SensorManager.SENSOR_DELAY_UI)
             } else {
                 val a = accel?.let {
-                    sensorManager.registerListener(this, it, SensorManager.SENSOR_DELAY_NORMAL)
+                    sensorManager.registerListener(this, it, SensorManager.SENSOR_DELAY_UI)
                 } ?: false
                 val m = magnet?.let {
-                    sensorManager.registerListener(this, it, SensorManager.SENSOR_DELAY_NORMAL)
+                    sensorManager.registerListener(this, it, SensorManager.SENSOR_DELAY_UI)
                 } ?: false
                 if (!(a && m)) sensorManager.unregisterListener(this)
                 a && m
@@ -285,8 +287,11 @@ class ArcsCompassService : WatchFaceService() {
         }
 
         override fun onSensorChanged(event: SensorEvent) {
-            if (!listening || state.isAmbient.value == true || state.isVisible.value != true)
-                return
+            // The registration lifecycle already guarantees the sensors are
+            // disabled for AOD/hidden display. Do not additionally gate on a
+            // nullable WatchState snapshot: that suppressed heading events on
+            // some legacy engines before the state flow settled.
+            if (!listening) return
             val success = when (event.sensor.type) {
                 Sensor.TYPE_ROTATION_VECTOR, Sensor.TYPE_GEOMAGNETIC_ROTATION_VECTOR -> {
                     SensorManager.getRotationMatrixFromVector(matrix, event.values)
@@ -321,7 +326,9 @@ class ArcsCompassService : WatchFaceService() {
             if (lastCompassRedrawAtMs == 0L ||
                 now - lastCompassRedrawAtMs >= minCompassRedrawIntervalMs) {
                 lastCompassRedrawAtMs = now
-                invalidate()
+                // Sensor callbacks may arrive off the UI thread. Using the
+                // documented thread-safe API avoids silently lost redraws.
+                postInvalidate()
             }
         }
 
