@@ -22,6 +22,7 @@ import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
 import android.os.BatteryManager
+import android.os.SystemClock
 import android.text.TextUtils
 import android.text.TextPaint
 import android.text.format.DateFormat
@@ -169,9 +170,14 @@ class ArcsCompassService : WatchFaceService() {
         private val context: Context,
         private val slots: ComplicationSlotsManager
     ) : Renderer.CanvasRenderer(
-        holder, style, state, CanvasType.HARDWARE, 1000L,
+        holder, style, state, CanvasType.HARDWARE, 60000L,
         clearWithBackgroundTintBeforeRenderingHighlightLayer = true
     ), SensorEventListener {
+        // Rendering is driven by system minute ticks, new complication data,
+        // and deliberate sensor invalidations — never a perpetual FPS loop.
+        // This also lets the watch return to ambient without an animation timer.
+        override fun shouldAnimate(): Boolean = false
+
         private val p = Paint(Paint.ANTI_ALIAS_FLAG)
         private val bg = Color.BLACK // OLED black, as in the stock Arcs face
         private val fg = Color.rgb(248, 248, 242)
@@ -183,6 +189,28 @@ class ArcsCompassService : WatchFaceService() {
         private val orange = Color.rgb(255, 184, 108)
         private val cyan = Color.rgb(139, 233, 253)
         private val red = Color.rgb(255, 85, 85)
+        private val dateFormatter = DateTimeFormatter.ofPattern(
+            "EEE, MMM d", Locale.getDefault()
+        )
+        private val percentPattern =
+            Regex("""^([0-9]{1,3}(?:[.,][0-9]+)?)\s*%$""")
+        private val progressRect = RectF(
+            233f - 188f, 233f - 188f, 233f + 188f, 233f + 188f
+        )
+        private val arcSegments = arrayOf(
+            floatArrayOf(285f, 352f), floatArrayOf(8f, 75f),
+            floatArrayOf(105f, 172f), floatArrayOf(188f, 255f)
+        )
+        private val arcColors = intArrayOf(orange,green,cyan,green)
+        private val arcSlotIds = intArrayOf(3,4,6,5)
+        private val outerSlots = arrayOf(
+            Triple(3, 315f, orange), Triple(4, 45f, green),
+            Triple(6, 137f, cyan), Triple(5, 223f, green)
+        )
+        private val centerSlots = arrayOf(Triple(1,165f,green), Triple(2,301f,pink))
+        private val compassPointer = Path().apply {
+            moveTo(233f, 1f); lineTo(223f, 10f); lineTo(243f, 10f); close()
+        }
         // Three separated radial bands: compass outside, arcs in the middle,
         // larger complication labels inside. Distances use 466x466 source units.
         private val compassLabelRadius = 212f
@@ -199,8 +227,12 @@ class ArcsCompassService : WatchFaceService() {
             "selected_complication_provider_icons", Context.MODE_PRIVATE
         )
         private val sensorManager = context.getSystemService(Context.SENSOR_SERVICE) as SensorManager
-        private val rotation = sensorManager.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR)
-            ?: sensorManager.getDefaultSensor(Sensor.TYPE_GEOMAGNETIC_ROTATION_VECTOR)
+        // Prefer the low-power fused orientation source: it avoids the gyro.
+        // The traditional rotation vector stays as fallback for watches
+        // without a geomagnetic rotation-vector sensor.
+        private val rotation =
+            sensorManager.getDefaultSensor(Sensor.TYPE_GEOMAGNETIC_ROTATION_VECTOR)
+                ?: sensorManager.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR)
         private val accel = if(rotation == null) sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER) else null
         private val magnet = if(rotation == null) sensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD) else null
         private val gravityValues = FloatArray(3)
@@ -213,6 +245,9 @@ class ArcsCompassService : WatchFaceService() {
         private var listening = false
         private var heading = 0f
         private var haveHeading = false
+        private var lastCompassRedrawAtMs = 0L
+        // Compass redrawing is capped at two frames/second while worn/visible.
+        private val minCompassRedrawIntervalMs = 500L
 
         init {
             scope.launch {
@@ -226,22 +261,32 @@ class ArcsCompassService : WatchFaceService() {
 
         private fun startCompass() {
             if (listening) return
+            // Re-acquire an immediate valid heading when the user wakes the face.
+            haveHeading = false
+            lastCompassRedrawAtMs = 0L
             listening = if (rotation != null) {
-                sensorManager.registerListener(this, rotation, SensorManager.SENSOR_DELAY_UI)
+                sensorManager.registerListener(this, rotation, SensorManager.SENSOR_DELAY_NORMAL)
             } else {
-                val a = accel?.let { sensorManager.registerListener(this, it, SensorManager.SENSOR_DELAY_UI) } ?: false
-                val m = magnet?.let { sensorManager.registerListener(this, it, SensorManager.SENSOR_DELAY_UI) } ?: false
+                val a = accel?.let {
+                    sensorManager.registerListener(this, it, SensorManager.SENSOR_DELAY_NORMAL)
+                } ?: false
+                val m = magnet?.let {
+                    sensorManager.registerListener(this, it, SensorManager.SENSOR_DELAY_NORMAL)
+                } ?: false
+                if (!(a && m)) sensorManager.unregisterListener(this)
                 a && m
             }
         }
 
         private fun stopCompass() {
-            if (!listening) return
+            // Always unregister, including partial fallback registration.
             sensorManager.unregisterListener(this)
             listening = false
         }
 
         override fun onSensorChanged(event: SensorEvent) {
+            if (!listening || state.isAmbient.value == true || state.isVisible.value != true)
+                return
             val success = when (event.sensor.type) {
                 Sensor.TYPE_ROTATION_VECTOR, Sensor.TYPE_GEOMAGNETIC_ROTATION_VECTOR -> {
                     SensorManager.getRotationMatrixFromVector(matrix, event.values)
@@ -266,13 +311,18 @@ class ArcsCompassService : WatchFaceService() {
             val azimuth = ((Math.toDegrees(orientation[0].toDouble()).toFloat() % 360f) + 360f) % 360f
             if (haveHeading) {
                 val delta = ((azimuth - heading + 540f) % 360f) - 180f
-                if (abs(delta) < 1.8f) return
-                heading = (heading + delta * 0.25f + 360f) % 360f
+                if (abs(delta) < 2.0f) return
+                heading = (heading + delta * 0.40f + 360f) % 360f
             } else {
                 heading = azimuth
                 haveHeading = true
             }
-            invalidate()
+            val now = SystemClock.elapsedRealtime()
+            if (lastCompassRedrawAtMs == 0L ||
+                now - lastCompassRedrawAtMs >= minCompassRedrawIntervalMs) {
+                lastCompassRedrawAtMs = now
+                invalidate()
+            }
         }
 
         override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {
@@ -291,9 +341,7 @@ class ArcsCompassService : WatchFaceService() {
                 drawCompass(canvas)
                 drawArcs(canvas)
                 circles(canvas)
-                val dateString = zonedDateTime.format(
-                    DateTimeFormatter.ofPattern("EEE, MMM d", Locale.getDefault())
-                )
+                val dateString = zonedDateTime.format(dateFormatter)
                 text(canvas, dateString, 233f, 137f, 27f, fg)
             }
             val h = if (DateFormat.is24HourFormat(context)) zonedDateTime.hour
@@ -320,14 +368,8 @@ class ArcsCompassService : WatchFaceService() {
          * slots are still available to edit and launch their providers.
          */
         private fun drawOuterComplicationLabels(canvas: Canvas) {
-            // upper-left, upper-right, lower-right, lower-left
-            val data = arrayOf(
-                Triple(3, 315f, orange),
-                Triple(4, 45f, green),
-                Triple(6, 137f, cyan),
-                Triple(5, 223f, green)
-            )
-            for ((id, bearing, tint) in data) {
+            // Coordinates and colors are immutable between sensor frames.
+            for ((id, bearing, tint) in outerSlots) {
                 val slot = slots[id] ?: continue
                 if (!slot.enabled) continue
 
@@ -542,30 +584,22 @@ class ArcsCompassService : WatchFaceService() {
         }
 
         private fun drawArcs(canvas: Canvas) {
-            val rect = RectF(233f - progressArcRadius, 233f - progressArcRadius,
-                233f + progressArcRadius, 233f + progressArcRadius)
-            val ranges = arrayOf(
-                floatArrayOf(285f, 352f), floatArrayOf(8f, 75f),
-                floatArrayOf(105f, 172f), floatArrayOf(188f, 255f)
-            )
-            val colors = intArrayOf(orange, green, cyan, green)
-            val ids = intArrayOf(3, 4, 6, 5)
             p.style = Paint.Style.STROKE
             p.strokeWidth = 10f
             p.strokeCap = Paint.Cap.ROUND
-            ranges.forEachIndexed { i, a ->
+            arcSegments.forEachIndexed { i, a ->
                 val start = a[0] - 90f
                 val sweep = a[1] - a[0]
                 p.color = track
-                canvas.drawArc(rect, start, sweep, false, p)
+                canvas.drawArc(progressRect, start, sweep, false, p)
                 // A filled arc must represent THIS slot's value.
                 // Ranged/goal complications provide a real range. Plain
                 // percentage strings are safe to normalize; other text
                 // (date, world clock, notifications) remains an unfilled track.
-                val percentage = displayProgress(ids[i])
+                val percentage = displayProgress(arcSlotIds[i])
                 if (percentage != null) {
-                    p.color = colors[i]
-                    canvas.drawArc(rect, start, sweep * percentage.coerceIn(0f,1f), false, p)
+                    p.color = arcColors[i]
+                    canvas.drawArc(progressRect, start, sweep * percentage.coerceIn(0f,1f), false, p)
                 }
             }
             p.style = Paint.Style.FILL
@@ -590,8 +624,7 @@ class ArcsCompassService : WatchFaceService() {
             val text = data.text.getTextAt(context.resources, Instant.now()).toString().trim()
             // An explicit percent is already a normalized data source. Don't
             // invent progress for a date, count, calendar event, or clock.
-            val match = Regex("""^([0-9]{1,3}(?:[.,][0-9]+)?)\s*%$""")
-                .matchEntire(text)
+            val match = percentPattern.matchEntire(text)
             if (match != null) {
                 return (match.groupValues[1].replace(',', '.').toFloatOrNull()
                     ?: return null).div(100f).coerceIn(0f,1f)
@@ -616,8 +649,7 @@ class ArcsCompassService : WatchFaceService() {
         }
 
         private fun drawCenterComplications(canvas: Canvas) {
-            val centers = arrayOf(Triple(1,165f,green), Triple(2,301f,pink))
-            for ((id, x, tint) in centers) {
+            for ((id, x, tint) in centerSlots) {
                 val slot = slots[id] ?: continue
                 if (!slot.enabled) continue
                 val data = slot.complicationData.value
@@ -705,11 +737,8 @@ class ArcsCompassService : WatchFaceService() {
             text(canvas, if (haveHeading) "%03d°".format(Locale.US, heading.toInt())
                  else "–°", 233f, 403f, 25f, purple)
             // Red triangle is a fixed 12-o'clock orientation indicator.
-            val triangle = Path().apply {
-                moveTo(233f, 1f); lineTo(223f, 10f); lineTo(243f, 10f); close()
-            }
             p.color = red
-            canvas.drawPath(triangle,p)
+            canvas.drawPath(compassPointer,p)
         }
 
         private fun text(
