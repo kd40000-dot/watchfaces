@@ -1,0 +1,41 @@
+name: Publish verified Arcs Dracula v0.5.3 APK
+on:
+  push:
+    paths:
+      - '.github/workflows/publish-v053.yml'
+  workflow_dispatch:
+
+permissions:
+  actions: read
+  contents: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download previously verified v0.5.3 build artifact
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/watchface-release
+          gh run download 43259908885 \
+            --repo "$GH_REPO" \
+            --name Arcs-Dracula-Live-Compass-WearOS5-experimental \
+            --dir /tmp/watchface-release
+          test -s /tmp/watchface-release/legacy-debug.apk
+          echo "0a589e19926bd1ed3d35d9a7ddb69ecd13056b58e174ba8a588214d354995503  /tmp/watchface-release/legacy-debug.apk" | sha256sum -c -
+          mv /tmp/watchface-release/legacy-debug.apk /tmp/watchface-release/Arcs-Dracula-Live-Compass-v0.5.3.apk
+      - name: Publish GitHub Release with directly downloadable APK
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          gh release create v0.5.3 \
+            /tmp/watchface-release/Arcs-Dracula-Live-Compass-v0.5.3.apk \
+            --repo "$GH_REPO" \
+            --target c1fa0afead9140b7c206e38517290989d8fabd70 \
+            --title "Arcs Dracula Live Compass v0.5.3 (compass rollback)" \
+            --notes "Restores the complete original v0.4.6 renderer source and known working sensor path; higher version code allows updates over v0.5.2. The APK matches the previously verified GitHub Actions build (SHA-256 0a589e19926bd1ed3d35d9a7ddb69ecd13056b58e174ba8a588214d354995503). On-watch operation still requires verification. Signed with the project development key."
