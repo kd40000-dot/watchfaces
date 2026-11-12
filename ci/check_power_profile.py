@@ -1,29 +1,32 @@
 #!/usr/bin/env python3
-"""Fail CI if the wearable live compass renderer regresses to busy polling.
+"""Regression checks for the last verified working live compass plus retained AOD safety.
 
-This is a static lifecycle/power safeguard; real power savings need on-watch
-measurements and the OnePlus RTOS warning remains a vendor policy limitation.
+The original 0.5.0 power experiment stopped compass movement on the OnePlus
+Watch 2. Prioritize proven compass functionality. We preserve allocation caches
+and suspend sensors in ambient, but the active 1s frame rate is intentionally
+back until an adaptive mode has been tested on actual hardware.
 """
 from pathlib import Path
 import re
+
 s=Path("legacy/src/main/java/dev/kd40000/arcscompasslive/ArcsCompassService.kt").read_text()
-requirements={
-    "non-animated renderer": r"override\s+fun\s+shouldAnimate\(\):\s+Boolean\s*=\s*false",
-    "minute rather than 1s automatic frames": r"CanvasType\.HARDWARE,\s*60000L",
-    "working sensor preferred": r"getDefaultSensor\(Sensor\.TYPE_ROTATION_VECTOR\)",
-    "working sensor event rate": r"SensorManager\.SENSOR_DELAY_UI",
-    "thread-safe sensor redraw": r"postInvalidate\(\)",
-    "no nullable WatchState gate": r"if\s*\(!listening\)\s*return",
-    "on-hide sensor teardown": r"if\s*\(on\)\s*startCompass\(\)\s*else\s*stopCompass\(\)",
-    "minimum redraw gap": r"minCompassRedrawIntervalMs\s*=\s*250L",
-    "redraw throttle": r"now\s*-\s*lastCompassRedrawAtMs\s*>=\s*minCompassRedrawIntervalMs",
-    "cached arc shapes": r"private\s+val\s+progressRect\s*=\s*RectF\(",
-    "OLED black ambient": r"canvas\.drawColor\(if\s*\(ambient\)\s*Color\.BLACK\s*else\s*bg\)",
+checks={
+    "verified working interactive frame cadence": r"CanvasType\.HARDWARE,\s*1000L",
+    "normal AndroidX interactive scheduling": r"Renderer\.CanvasRenderer\(",
+    "verified rotation vector first": r"getDefaultSensor\(Sensor\.TYPE_ROTATION_VECTOR\)",
+    "verified UI-speed sensor update": r"SENSOR_DELAY_UI",
+    "compass invalidation on movement": r"heading = azimuth[\s\S]*?invalidate\(\)",
+    "stop sensors during ambient/invisibility": r"if\s*\(on\)\s*startCompass\(\)\s*else\s*stopCompass\(\)",
+    "stop sensors on destroy": r"override fun onDestroy\([\s\S]*?stopCompass\(\)",
+    "cached arc graphics": r"private\s+val\s+progressRect\s*=\s*RectF\(",
+    "true black ambient": r"canvas\.drawColor\(if\s*\(ambient\)\s*Color\.BLACK\s*else\s*bg\)",
 }
-for name,regex in requirements.items():
-    assert re.search(regex,s,re.MULTILINE),f"Missing power safeguard: {name}"
-    print("PASS:",name)
-assert "SensorManager.SENSOR_DELAY_NORMAL" not in s, "sensor update rate fell back to broken path"
-assert "1000L" not in s, "1Hz busy redraw regressed"
-assert s.count("sensorManager.unregisterListener(this)")>=1,"Sensors aren't released"
-print("Battery lifecycle static checks passed; actual draw rate and consumption require device testing.")
+for label,regex in checks.items():
+    assert re.search(regex,s,re.MULTILINE),f"FAIL {label}"
+    print("PASS:",label)
+assert "override fun shouldAnimate(): Boolean = false" not in s, (
+    "Do not disable AndroidX scheduled interactive draws without watch test"
+)
+assert "60000L" not in s, "Minute-only automatic frame rate broke compass on device"
+assert "SensorManager.SENSOR_DELAY_NORMAL" not in s, "Sensor delay override broke compass"
+print("PASS: confirmed working sensor + rendering behavior restored")
