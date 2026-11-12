@@ -42,6 +42,8 @@ jobs:
           test -s legacy/src/main/res/drawable-nodpi/preview_bitmap.png
       - name: Check dial geometry and safe label clearances
         run: python3 ci/check_live_layout.py
+      - name: Check low-power compass and rendering lifecycle
+        run: python3 ci/check_power_profile.py
       - name: Build sensor-driven companion face
         run: gradle --no-daemon :legacy:assembleDebug
       - name: Check complication chooser manifest
