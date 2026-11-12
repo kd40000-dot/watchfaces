@@ -22,7 +22,6 @@ import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
 import android.os.BatteryManager
-import android.os.SystemClock
 import android.text.TextUtils
 import android.text.TextPaint
 import android.text.format.DateFormat
@@ -170,14 +169,9 @@ class ArcsCompassService : WatchFaceService() {
         private val context: Context,
         private val slots: ComplicationSlotsManager
     ) : Renderer.CanvasRenderer(
-        holder, style, state, CanvasType.HARDWARE, 60000L,
+        holder, style, state, CanvasType.HARDWARE, 1000L,
         clearWithBackgroundTintBeforeRenderingHighlightLayer = true
     ), SensorEventListener {
-        // Rendering is driven by system minute ticks, new complication data,
-        // and deliberate sensor invalidations — never a perpetual FPS loop.
-        // This also lets the watch return to ambient without an animation timer.
-        override fun shouldAnimate(): Boolean = false
-
         private val p = Paint(Paint.ANTI_ALIAS_FLAG)
         private val bg = Color.BLACK // OLED black, as in the stock Arcs face
         private val fg = Color.rgb(248, 248, 242)
@@ -231,9 +225,8 @@ class ArcsCompassService : WatchFaceService() {
         // in v0.4.6. On this firmware the geomagnetic fusion source can be
         // advertised but not deliver usable updates to the legacy face.
         // Prefer the confirmed working path; fall back if it is absent.
-        private val rotation =
-            sensorManager.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR)
-                ?: sensorManager.getDefaultSensor(Sensor.TYPE_GEOMAGNETIC_ROTATION_VECTOR)
+        private val rotation = sensorManager.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR)
+            ?: sensorManager.getDefaultSensor(Sensor.TYPE_GEOMAGNETIC_ROTATION_VECTOR)
         private val accel = if(rotation == null) sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER) else null
         private val magnet = if(rotation == null) sensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD) else null
         private val gravityValues = FloatArray(3)
@@ -246,10 +239,6 @@ class ArcsCompassService : WatchFaceService() {
         private var listening = false
         private var heading = 0f
         private var haveHeading = false
-        private var lastCompassRedrawAtMs = 0L
-        // Cap sensor-driven paints without starving the live compass.
-        // Sensor events can be more frequent; actual paints max ~4/second.
-        private val minCompassRedrawIntervalMs = 250L
 
         init {
             scope.launch {
@@ -263,35 +252,22 @@ class ArcsCompassService : WatchFaceService() {
 
         private fun startCompass() {
             if (listening) return
-            // Re-acquire an immediate valid heading when the user wakes the face.
-            haveHeading = false
-            lastCompassRedrawAtMs = 0L
             listening = if (rotation != null) {
                 sensorManager.registerListener(this, rotation, SensorManager.SENSOR_DELAY_UI)
             } else {
-                val a = accel?.let {
-                    sensorManager.registerListener(this, it, SensorManager.SENSOR_DELAY_UI)
-                } ?: false
-                val m = magnet?.let {
-                    sensorManager.registerListener(this, it, SensorManager.SENSOR_DELAY_UI)
-                } ?: false
-                if (!(a && m)) sensorManager.unregisterListener(this)
+                val a = accel?.let { sensorManager.registerListener(this, it, SensorManager.SENSOR_DELAY_UI) } ?: false
+                val m = magnet?.let { sensorManager.registerListener(this, it, SensorManager.SENSOR_DELAY_UI) } ?: false
                 a && m
             }
         }
 
         private fun stopCompass() {
-            // Always unregister, including partial fallback registration.
+            if (!listening) return
             sensorManager.unregisterListener(this)
             listening = false
         }
 
         override fun onSensorChanged(event: SensorEvent) {
-            // The registration lifecycle already guarantees the sensors are
-            // disabled for AOD/hidden display. Do not additionally gate on a
-            // nullable WatchState snapshot: that suppressed heading events on
-            // some legacy engines before the state flow settled.
-            if (!listening) return
             val success = when (event.sensor.type) {
                 Sensor.TYPE_ROTATION_VECTOR, Sensor.TYPE_GEOMAGNETIC_ROTATION_VECTOR -> {
                     SensorManager.getRotationMatrixFromVector(matrix, event.values)
@@ -316,20 +292,13 @@ class ArcsCompassService : WatchFaceService() {
             val azimuth = ((Math.toDegrees(orientation[0].toDouble()).toFloat() % 360f) + 360f) % 360f
             if (haveHeading) {
                 val delta = ((azimuth - heading + 540f) % 360f) - 180f
-                if (abs(delta) < 2.0f) return
-                heading = (heading + delta * 0.40f + 360f) % 360f
+                if (abs(delta) < 1.8f) return
+                heading = (heading + delta * 0.25f + 360f) % 360f
             } else {
                 heading = azimuth
                 haveHeading = true
             }
-            val now = SystemClock.elapsedRealtime()
-            if (lastCompassRedrawAtMs == 0L ||
-                now - lastCompassRedrawAtMs >= minCompassRedrawIntervalMs) {
-                lastCompassRedrawAtMs = now
-                // Sensor callbacks may arrive off the UI thread. Using the
-                // documented thread-safe API avoids silently lost redraws.
-                postInvalidate()
-            }
+            invalidate()
         }
 
         override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {
